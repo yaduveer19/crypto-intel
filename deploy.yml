@@ -1,0 +1,45 @@
+# Crypto Intel — Production Deployment
+# Deploy to any VPS with Docker installed
+#
+# Quick start:
+#   1. Copy to server: scp -r crypto-intel/ user@server:~/
+#   2. ssh into server, cd crypto-intel
+#   3. docker compose -f docker-compose.yml -f deploy.yml up -d
+#   4. Set up nginx reverse proxy (see below)
+#
+# For Vercel (frontend) + Render (backend) deployment:
+#   Frontend: vercel --prod  (from frontend/)
+#   Backend:  deploy to Render as Docker service
+
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  backend:
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-change-this-to-random-secret}
+    restart: unless-stopped
+
+  frontend:
+    environment:
+      - NEXT_PUBLIC_API_URL=${PUBLIC_API_URL:-https://api.cryptointel.io}
+      - NEXT_PUBLIC_WS_URL=${PUBLIC_WS_URL:-wss://api.cryptointel.io/ws}
+    restart: unless-stopped
+
+  postgres:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
