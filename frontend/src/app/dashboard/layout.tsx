@@ -13,26 +13,12 @@ const navItems = [
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, loading } = useAuth()
+  const { user } = useAuth()
   const pathname = usePathname()
-  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login')
-    }
-  }, [user, loading, router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
-        <div className="text-text-secondary animate-pulse">Loading...</div>
-      </div>
-    )
-  }
-
-  if (!user) return null
+  const demoUser = user || { name: 'Demo User', email: 'demo@cryptointel.io' }
+  const logout = () => { localStorage.removeItem('token'); window.location.href = '/login' }
 
   return (
     <div className="min-h-screen bg-dark-900 flex">
@@ -59,7 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="p-4 border-t border-dark-700">
           <div className="mb-3">
-            <div className="text-sm text-white">{user.name || user.email}</div>
+            <div className="text-sm text-white">{demoUser.name || demoUser.email}</div>
             <div className="text-[10px] text-accent-green">✨ Free — all features unlocked</div>
           </div>
           <button onClick={logout} className="w-full text-left text-sm text-text-secondary hover:text-accent-red transition">

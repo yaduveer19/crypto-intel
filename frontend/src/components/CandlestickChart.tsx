@@ -7,9 +7,12 @@ const H = 340
 const PAD = { top: 10, right: 12, bottom: 24, left: 62 }
 
 export default function CandlestickChart({ symbol, exchange }: { symbol: string; exchange?: string }) {
+  const [mounted, setMounted] = useState(false)
   const [klines, setKlines] = useState<any[]>([])
   const [vwapLine, setVwapLine] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => { setMounted(true) }, [])
   const [hover, setHover] = useState<any>(null)
 
   const load = useCallback(async () => {
@@ -63,7 +66,7 @@ export default function CandlestickChart({ symbol, exchange }: { symbol: string;
     return { candles, vwap, gridLines, yMin, yMax, step }
   }, [klines, vwapLine])
 
-  if (loading) return <div className="glass rounded-xl p-4 border border-dark-500"><p className="text-text-secondary text-xs">Loading chart...</p></div>
+  if (!mounted || loading) return <div className="glass rounded-xl p-4 border border-dark-500"><p className="text-text-secondary text-xs">Loading chart...</p></div>
 
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">

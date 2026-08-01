@@ -1,12 +1,14 @@
 'use client'
 import React, { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import LiveModeBadge from '@/components/LiveModeBadge'
-import CandlestickChart from '@/components/CandlestickChart'
-import OrderbookPanel from '@/components/OrderbookPanel'
-import CVDChart from '@/components/CVDChart'
-import VolumeProfileChart from '@/components/VolumeProfileChart'
-import FootprintPanel from '@/components/FootprintPanel'
 import { getExchanges } from '@/lib/api'
+
+const CandlestickChart = dynamic(() => import('@/components/CandlestickChart'), { ssr: false })
+const OrderbookPanel = dynamic(() => import('@/components/OrderbookPanel'), { ssr: false })
+const CVDChart = dynamic(() => import('@/components/CVDChart'), { ssr: false })
+const VolumeProfileChart = dynamic(() => import('@/components/VolumeProfileChart'), { ssr: false })
+const FootprintPanel = dynamic(() => import('@/components/FootprintPanel'), { ssr: false })
 
 const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
 
