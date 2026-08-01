@@ -5,6 +5,8 @@ import GlobeView from '@/components/GlobeView'
 import LaneBreakdown from '@/components/LaneBreakdown'
 import CopilotChat from '@/components/CopilotChat'
 import SimulatorPanel from '@/components/SimulatorPanel'
+import MarketScanner from '@/components/MarketScanner'
+import LiveModeBadge from '@/components/LiveModeBadge'
 import { createWebSocket, createBinanceWebSocket } from '@/lib/api'
 
 const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
@@ -58,7 +60,9 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <LiveModeBadge />
+          <div className="flex gap-2">
           {SYMBOLS.map(sym => (
             <button key={sym} onClick={() => setActiveSymbol(sym)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
@@ -67,6 +71,7 @@ export default function DashboardPage() {
               {sym.replace('USDT', '')}
             </button>
           ))}
+          </div>
         </div>
       </div>
 
@@ -120,6 +125,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="col-span-12 lg:col-span-3 space-y-4">
+          <MarketScanner />
           <CopilotChat />
           <SimulatorPanel />
         </div>

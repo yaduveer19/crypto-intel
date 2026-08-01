@@ -39,14 +39,14 @@ export default function VerdictCard({
   }
 
   return (
-    <div className={`glass rounded-xl p-5 border ${bias ? biasColors[bias] || 'border-dark-500' : 'border-dark-500'}`}>
+    <div className={`glass rounded-xl p-5 border ${bias ? biasColors[bias as string] || 'border-dark-500' : 'border-dark-500'}`}>
       <div className="flex items-center justify-between mb-4">
         <div>
           <span className="text-xs text-text-secondary uppercase tracking-wider">Signal</span>
           <h3 className="text-lg font-bold text-white">{symbol.replace('USDT', '')}/USDT</h3>
         </div>
         <div className="text-right">
-          <div className={`text-2xl font-bold ${biasColors[bias] || 'text-white'}`}>
+          <div className={`text-2xl font-bold ${biasColors[bias as string] || 'text-white'}`}>
             {bias || '--'}
           </div>
           <div className="text-xs text-text-secondary">{tier ? `${tierDots[tier] || ''} ${tier}` : ''}</div>

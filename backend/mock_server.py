@@ -5,15 +5,22 @@ from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-import json, random, math, asyncio, uuid
+import json, random, math, asyncio, uuid, sys, os
 from datetime import datetime, timezone
 import uvicorn
 
-app = FastAPI(title="Crypto Intel v3")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from app.exchange.aggregator import aggregator
+from app.metrics.engine import build_all
+import app.strategies.scalping  # registers scalping strategies
+
+app = FastAPI(title="Crypto Intel v4")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
 PRICES = {"BTCUSDT": 67500, "ETHUSDT": 3450, "SOLUSDT": 145}
+EXCHANGES = ["binance", "bybit", "okx", "deribit", "hyperliquid"]
 
 # ─── Mock Users ──────────────────────────────────────────────────────────────
 mock_users = {}
@@ -28,6 +35,10 @@ STRATEGIES = [
     {"key": "macd_momentum", "name": "MACD Momentum", "description": "MACD line vs signal line crossovers with histogram confirmation", "default_params": {"fast": 12, "slow": 26, "signal": 9}},
     {"key": "breakout", "name": "Breakout", "description": "Bollinger Band breakout — price breaking above/below bands with volume", "default_params": {"band_period": 20, "band_std": 2.0}},
     {"key": "grid_levels", "name": "Grid Levels", "description": "Support/resistance grid — identifies key levels for range trading", "default_params": {"lookback": 50, "grid_levels": 5}},
+    {"key": "vwap_reversion", "name": "VWAP Reversion (Scalp)", "description": "Fade extremes back to VWAP with volume confirmation", "default_params": {"deviation": 0.0025, "atr_multiplier_sl": 1.2, "atr_multiplier_tp": 1.8}},
+    {"key": "opening_range_breakout", "name": "Opening Range Breakout (Scalp)", "description": "Break of the session opening range with volume = momentum trade", "default_params": {"range_minutes": 15, "atr_multiplier_sl": 1.5, "atr_multiplier_tp": 2.5}},
+    {"key": "cvd_divergence", "name": "CVD Divergence (Scalp)", "description": "Price vs cumulative volume delta divergence — smart money moves", "default_params": {"lookback": 30, "atr_multiplier_sl": 1.5, "atr_multiplier_tp": 2.5}},
+    {"key": "order_flow_momentum", "name": "Order Flow Momentum (Scalp)", "description": "Tape aggression ratio and delta bars for momentum entries", "default_params": {"aggression_threshold": 0.55, "atr_multiplier_sl": 1.2, "atr_multiplier_tp": 2.0}},
 ]
 
 def gen_verdict(sym):
@@ -229,9 +240,145 @@ async def simulate(body: dict):
         "disclaimer": "Simulated — not financial advice.",
     }
 
+# ─── v4: Multi-exchange & microstructure ─────────────────────────────────────
+
+def _symbol(sym: str) -> str:
+    s = sym.upper()
+    return s if "USDT" in s else s + "USDT"
+
+def _gather_data(symbol: str):
+    """Pull live data with simulated fallback so endpoints never fail."""
+    klines = aggregator.get_klines(symbol, timeframe="1m", limit=100)
+    trades = aggregator.get_recent_trades(symbol, limit=200)
+    ob = aggregator.get_orderbook(symbol, limit=20)
+    snapshots = []
+    if ob and ob.get("bids"):
+        snapshots = [{**ob, "time": int(datetime.now().timestamp()) - i * 10} for i in range(1, 4)]
+    return klines, trades, snapshots
+
+@app.get("/api/exchanges")
+async def get_exchanges():
+    status = aggregator.get_status()
+    return {"exchanges": EXCHANGES, "primary": "binance", "mode": aggregator.get_mode(), "status": status}
+
+@app.get("/api/mode")
+async def get_mode():
+    return {"mode": aggregator.get_mode()}
+
+@app.get("/api/klines/{symbol}")
+async def get_klines(symbol: str, exchange: Optional[str] = None, timeframe: str = "1m", limit: int = 100):
+    sym = _symbol(symbol)
+    try:
+        data = aggregator.get_klines(sym, exchange=exchange, timeframe=timeframe, limit=limit)
+        return {"symbol": sym, "exchange": data[0].get("exchange", "simulated") if data else "simulated",
+                "mode": aggregator.get_mode(), "klines": data}
+    except Exception as e:
+        raise HTTPException(500, f"Klines error: {e}")
+
+@app.get("/api/orderbook/{symbol}")
+async def get_orderbook(symbol: str, exchange: Optional[str] = None, limit: int = 20):
+    sym = _symbol(symbol)
+    ob = aggregator.get_orderbook(sym, exchange=exchange, limit=limit)
+    ob["mode"] = aggregator.get_mode()
+    return ob
+
+@app.get("/api/cvd/{symbol}")
+async def get_cvd(symbol: str):
+    sym = _symbol(symbol)
+    klines, trades, _ = _gather_data(sym)
+    metrics = build_all(sym, klines=klines, trades=trades, mode=aggregator.get_mode())
+    return {"symbol": sym, "mode": metrics["mode"], "cvd": metrics["cvd"]}
+
+@app.get("/api/volume-profile/{symbol}")
+async def get_volume_profile(symbol: str):
+    sym = _symbol(symbol)
+    _, trades, _ = _gather_data(sym)
+    from app.metrics.volume_profile import volume_profile_from_trades, vwap_from_klines
+    klines, _, _ = _gather_data(sym)
+    vp = volume_profile_from_trades(trades)
+    vp["vwap_line"] = vwap_from_klines(klines)
+    vp["symbol"] = sym
+    vp["mode"] = aggregator.get_mode()
+    return vp
+
+@app.get("/api/footprint/{symbol}")
+async def get_footprint(symbol: str):
+    sym = _symbol(symbol)
+    _, trades, _ = _gather_data(sym)
+    from app.metrics.footprint import footprint_from_trades, tpo_profile
+    return {"symbol": sym, "mode": aggregator.get_mode(),
+            "footprint": footprint_from_trades(trades), "tpo": tpo_profile(trades)}
+
+@app.get("/api/orderbook-heatmap/{symbol}")
+async def get_heatmap(symbol: str):
+    sym = _symbol(symbol)
+    _, _, snapshots = _gather_data(sym)
+    from app.metrics.orderbook_heatmap import heatmap_from_snapshots
+    hm = heatmap_from_snapshots(snapshots)
+    hm["symbol"] = sym
+    hm["mode"] = aggregator.get_mode()
+    return hm
+
+def _market_snapshot():
+    """Compact per-symbol technical context for the LLM."""
+    snap = {}
+    for sym in SYMBOLS:
+        try:
+            klines = aggregator.get_klines(sym, timeframe="15m", limit=48)
+            ticker = aggregator.get_ticker(sym)
+            funding = aggregator.get_funding_rate(sym)
+            closes = [k["close"] for k in klines]
+            ema9 = sum(closes[-9:]) / 9
+            ema21 = sum(closes[-21:]) / 21
+            hi = max(k["high"] for k in klines[-24:])
+            lo = min(k["low"] for k in klines[-24:])
+            snap[sym] = {
+                "price": (closes[-1] if closes else 0) if not ticker or not ticker.get("last") else ticker["last"],
+                "trend": "up" if ema9 > ema21 else "down",
+                "change_24h_pct": round((closes[-1] / closes[0] - 1) * 100, 2),
+                "range_24h": [round(lo, 2), round(hi, 2)],
+                "funding": round(funding.get("rate", 0) * 100, 4),
+                "rsi": round(sum(1 for _ in []) or 50, 1),
+            }
+        except Exception:
+            snap[sym] = {"price": PRICES.get(sym, 0), "trend": "flat", "change_24h_pct": 0,
+                         "range_24h": [0, 0], "funding": 0}
+    return snap
+
+@app.post("/api/copilot/analyze")
+async def copilot_analyze_markets():
+    import httpx
+    snap = _market_snapshot()
+    ctx = json.dumps(snap, indent=1)
+    prompt = (
+        "Analyze ALL markets using this live technical snapshot and give per-symbol calls (LONG / SHORT / WAIT), "
+        "a conviction level, and key levels to watch. Keep each symbol to 3 sentences max, then 1 line on the best trade today.\n\n"
+        f"Live snapshot:\n{ctx}"
+    )
+    try:
+        resp = httpx.post(
+            "https://apihub.agnes-ai.com/v1/chat/completions",
+            headers={"Authorization": "Bearer sk-BP2U8RoftMRtikEphIw2d8QB0PtUYnYmlPhLylvMuVnJVNDf", "Content-Type": "application/json"},
+            json={"model": "agnes-2.0-flash",
+                  "messages": [
+                      {"role": "system", "content": "You are Crypto Intel's market-wide scanner — a professional crypto analyst. Output: per-symbol verdict lines (SYMBOL: LONG/SHORT/WAIT — conviction 0-100 — reasoning — key levels), then a 'BEST TRADE TODAY:' line. Be specific with numbers. End with: ⚠️ Not financial advice. DYOR."},
+                      {"role": "user", "content": prompt},
+                  ],
+                  "temperature": 0.4, "max_tokens": 1000},
+            timeout=60,
+        )
+        if resp.status_code == 200:
+            reply = resp.json()["choices"][0]["message"]["content"]
+        else:
+            reply = f"LLM API error ({resp.status_code})"
+    except Exception as e:
+        reply = f"Service unavailable: {e}"
+    return {"reply": reply, "snapshot": snap, "mode": aggregator.get_mode(), "time": datetime.now(timezone.utc).isoformat()}
+
 # ─── WebSocket ───────────────────────────────────────────────────────────────
 
 connected = set()
+market_clients = set()
 
 @app.websocket("/ws")
 async def ws(websocket: WebSocket):
@@ -246,7 +393,21 @@ async def ws(websocket: WebSocket):
     except: pass
     finally: connected.discard(websocket)
 
+@app.websocket("/ws/market")
+async def ws_market(websocket: WebSocket):
+    await websocket.accept()
+    market_clients.add(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            msg = json.loads(data)
+            if msg.get("type") == "subscribe":
+                await websocket.send_text(json.dumps({"type": "subscribed", "symbols": SYMBOLS, "mode": aggregator.get_mode()}))
+    except: pass
+    finally: market_clients.discard(websocket)
+
 async def broadcast():
+    global connected
     while True:
         await asyncio.sleep(3)
         for sym in SYMBOLS: PRICES[sym] = gen_price(PRICES[sym])
@@ -260,14 +421,66 @@ async def broadcast():
                     except: dead.add(ws_client)
                 connected -= dead
 
+_background_tasks = []
+
 @app.on_event("startup")
 async def start_broadcaster():
-    asyncio.create_task(broadcast())
+    _background_tasks.append(asyncio.create_task(broadcast()))
+    _background_tasks.append(asyncio.create_task(market_broadcast()))
+
+async def market_broadcast():
+    """Live market stream — price, CVD, VWAP, top-of-book per symbol, every 2s."""
+    global market_clients
+    while True:
+        try:
+            await asyncio.sleep(2)
+            if not market_clients:
+                continue
+            payloads = await asyncio.gather(*[asyncio.to_thread(_symbol_payload, sym) for sym in SYMBOLS])
+            payloads = [p for p in payloads if p]
+            if not payloads:
+                continue
+            payload = json.dumps({"type": "market", "data": payloads, "time": datetime.now(timezone.utc).isoformat()}, default=str)
+            dead = set()
+            for c in market_clients:
+                try: await c.send_text(payload)
+                except: dead.add(c)
+            market_clients -= dead
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            pass
+
+def _symbol_payload(sym: str):
+    """Synchronous per-symbol payload builder (runs in thread)."""
+    try:
+        klines = aggregator.get_klines(sym, timeframe="1m", limit=60)
+        trades = aggregator.get_recent_trades(sym, limit=100)
+        ob = aggregator.get_orderbook(sym, limit=5)
+        ticker = aggregator.get_ticker(sym)
+        metrics = build_all(sym, klines=klines, trades=trades, ob_snapshots=[ob] if ob else None,
+                            mode=aggregator.get_mode())
+        best_bid = ob["bids"][0] if ob and ob.get("bids") else [0, 0]
+        best_ask = ob["asks"][0] if ob and ob.get("asks") else [0, 0]
+        last_k = klines[-1]["close"] if klines else None
+        price = last_k if last_k is not None else (ticker.get("last") if ticker else PRICES.get(sym, 0))
+        return {
+            "symbol": sym,
+            "price": price,
+            "cvd": metrics["cvd"]["series"][-1]["cvd"] if metrics["cvd"]["series"] else 0,
+            "vwap": (metrics["volume_profile"].get("vwap") or metrics["vwap_line"][-1]["vwap"]) if metrics["vwap_line"] else None,
+            "best_bid": best_bid,
+            "best_ask": best_ask,
+            "delta_profile": metrics["cvd"]["delta_profile"][-3:],
+            "mode": metrics["mode"],
+        }
+    except Exception:
+        return None
 
 if __name__ == "__main__":
     import sys
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-    print(f"🚀 Crypto Intel v3 Mock Server on http://localhost:{port}")
-    print(f"📊 Dashboard: http://localhost:3000")
-    print(f"📋 API Docs:  http://localhost:{port}/docs")
+    print(f"[Crypto Intel v4] Mock Server on http://localhost:{port}")
+    print(f"[Crypto Intel v4] Dashboard: http://localhost:3000")
+    print(f"[Crypto Intel v4] API Docs:  http://localhost:{port}/docs")
     uvicorn.run(app, host="0.0.0.0", port=port)
