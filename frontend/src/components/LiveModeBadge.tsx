@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { getMode } from '@/lib/api'
 
-export default function LiveModeBadge() {
+export default function LiveModeBadge({ live: liveOverride }: { live?: boolean }) {
   const [mode, setMode] = useState<string | null>(null)
 
   useEffect(() => {
@@ -18,8 +18,8 @@ export default function LiveModeBadge() {
     return () => { cancelled = true; clearInterval(i) }
   }, [])
 
-  if (!mode) return null
-  const live = mode === 'live'
+  const live = liveOverride !== undefined ? liveOverride : mode === 'live'
+  if (liveOverride === undefined && !mode) return null
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
       live ? 'bg-accent-green/10 text-accent-green border-accent-green/30' : 'bg-accent-yellow/10 text-accent-yellow border-accent-yellow/30'

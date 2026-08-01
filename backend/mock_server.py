@@ -5,7 +5,7 @@ from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
-import json, random, math, asyncio, uuid, sys, os
+import json, random, math, asyncio, uuid, sys, os, time
 from datetime import datetime, timezone
 import uvicorn
 
@@ -13,7 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.exchange.aggregator import aggregator
 from app.metrics.engine import build_all
+from app.strategies.engine import get_all_strategies, get_strategy, StrategyResult
 import app.strategies.scalping  # registers scalping strategies
+import app.strategies  # registers classic strategies
 
 app = FastAPI(title="Crypto Intel v4")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -42,21 +44,57 @@ STRATEGIES = [
 ]
 
 def gen_verdict(sym):
+    """Real verdict — runs ALL registered strategies on live klines, synthesizes consensus."""
     price = PRICES.get(sym, 50000)
-    bias = random.choices(["BULL", "BEAR", "NEUTRAL"], weights=[0.4, 0.3, 0.3])[0]
-    tier = random.choices(["HIGH", "MOD", "LOW"], weights=[0.3, 0.4, 0.3])[0]
-    atr = price * 0.02
-    if bias == "BULL":
-        return {"bias": bias, "tier": tier, "entry_price": price, "stop_loss": round(price - atr * 2, 2), "tp1": round(price + atr * 3, 2), "tp2": round(price + atr * 6, 2),
-                "reasoning": f"{bias} signal from 4-lane synthesis. Technical + Flow align. ATR-based risk levels set."}
-    elif bias == "BEAR":
-        return {"bias": bias, "tier": tier, "entry_price": price, "stop_loss": round(price + atr * 2, 2), "tp1": round(price - atr * 3, 2), "tp2": round(price - atr * 6, 2),
-                "reasoning": f"{bias} signal. Macro + Narrative driving bearish bias. Tight stops recommended."}
-    return {"bias": bias, "tier": tier, "entry_price": price, "stop_loss": round(price - atr * 1.5, 2), "tp1": round(price + atr * 2, 2), "tp2": round(price + atr * 4, 2),
-            "reasoning": "Mixed signals across lanes. Waiting for clearer confirmation."}
+    try:
+        klines = aggregator.get_klines(sym, timeframe="1m", limit=100)
+        if not klines or len(klines) < 20:
+            return {"bias": "NEUTRAL", "tier": "LOW", "entry_price": price,
+                    "stop_loss": round(price * 0.98, 2), "tp1": round(price * 1.02, 2), "tp2": round(price * 1.04, 2),
+                    "reasoning": "Not enough kline data yet."}
+        results = []
+        for s in get_all_strategies():
+            try:
+                strat = get_strategy(s["key"])
+                r = strat.analyze(sym, klines, params=None)
+                if r and r.bias != "NEUTRAL":
+                    results.append(r)
+            except Exception:
+                continue
+        if not results:
+            # market stats fallback — trend + flow read
+            closes = [k["close"] for k in klines]
+            ema_fast = sum(closes[-9:]) / 9
+            ema_slow = sum(closes[-21:]) / 21
+            bias = "BULL" if ema_fast > ema_slow else ("BEAR" if ema_fast < ema_slow else "NEUTRAL")
+            atr = price * 0.02
+            return {"bias": bias, "tier": "MOD", "entry_price": price,
+                    "stop_loss": round(price - atr * 2 if bias == "BULL" else price + atr * 2, 2),
+                    "tp1": round(price + atr * 3 if bias == "BULL" else price - atr * 3, 2),
+                    "tp2": round(price + atr * 6 if bias == "BULL" else price - atr * 6, 2),
+                    "reasoning": f"EMA trend read: {'uptrend' if bias=='BULL' else 'downtrend'} on 9/21. No strategy triggered — momentum baseline."}
+        bulls = sum(1 for r in results if r.bias == "BULL")
+        bears = sum(1 for r in results if r.bias == "BEAR")
+        bias = "BULL" if bulls > bears else ("BEAR" if bears > bulls else "NEUTRAL")
+        best = max(results, key=lambda r: 2 if r.tier == "HIGH" else 1 if r.tier == "MOD" else 0)
+        tier = "HIGH" if best.tier == "HIGH" or len(results) >= 3 else ("MOD" if best.tier == "MOD" or len(results) >= 2 else "LOW")
+        dirn = 1 if bias == "BULL" else -1
+        entry = best.entry_price or price
+        atr = abs(entry - (best.stop_loss or entry)) / (1.5 if best.tier in ("MOD", "HIGH") else 2.0) or price * 0.015
+        return {
+            "bias": bias, "tier": tier, "entry_price": round(entry, 2),
+            "stop_loss": round(entry - atr * 2 * dirn if best.stop_loss is None else best.stop_loss, 2),
+            "tp1": round(best.tp1 or entry + atr * 3 * dirn, 2),
+            "tp2": round(best.tp2 or entry + atr * 6 * dirn, 2),
+            "reasoning": f"{len(results)}/{len(get_all_strategies())} strategies triggered ({'BULL' if bulls else 'BEAR' if bears else 'NEUTRAL'} {bulls}-{bears}). Best: {best.tier} conviction. {best.reasoning[:80]}",
+            "strategy_count": len(results),
+        }
+    except Exception as e:
+        return {"bias": "NEUTRAL", "tier": "LOW", "entry_price": price,
+                "stop_loss": round(price * 0.98, 2), "tp1": round(price * 1.02, 2), "tp2": round(price * 1.04, 2),
+                "reasoning": f"Verdict engine error: {e}"}
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
-
 @app.post("/api/auth/register")
 async def register(body: dict):
     email = body.get("email", "")
@@ -88,7 +126,7 @@ async def get_me():
 
 @app.get("/api/strategies/list")
 async def list_strategies():
-    return STRATEGIES
+    return get_all_strategies()
 
 @app.get("/api/strategies/my")
 async def my_strategies():
@@ -104,27 +142,59 @@ async def configure_strategy(body: dict):
 
 @app.post("/api/strategies/run-all")
 async def run_all():
-    count = random.randint(1, 4)
+    """Run every registered strategy on every symbol against live klines."""
     results = []
-    for i in range(count):
-        sym = random.choice(SYMBOLS)
-        v = gen_verdict(sym)
-        results.append({"strategy": random.choice([s["key"] for s in STRATEGIES]), "symbol": sym, "bias": v["bias"], "tier": v["tier"]})
-    return {"status": "ok", "signals_generated": count, "results": results}
+    seen = set()
+    for sym in SYMBOLS:
+        try:
+            klines = aggregator.get_klines(sym, timeframe="1m", limit=100)
+        except Exception:
+            klines = None
+        for s in get_all_strategies():
+            try:
+                strat = get_strategy(s["key"])
+                if klines:
+                    r = strat.analyze(sym, klines, params=None)
+                else:
+                    r = None
+                if r and r.bias != "NEUTRAL":
+                    key = (s["key"], sym)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    results.append({
+                        "strategy": s["key"], "name": s["name"], "symbol": sym,
+                        "bias": r.bias, "tier": r.tier, "entry": r.entry_price,
+                        "sl": r.stop_loss, "tp1": r.tp1, "tp2": r.tp2, "reasoning": r.reasoning,
+                    })
+            except Exception:
+                continue
+    return {"status": "ok", "signals_generated": len(results), "results": results}
 
 @app.get("/api/strategies/signals")
 async def get_signals():
+    """Latest signals from the real strategy engine."""
     sigs = []
-    for i in range(10):
-        sym = random.choice(SYMBOLS)
-        v = gen_verdict(sym)
-        sigs.append({
-            "id": i + 1, "strategy": random.choice([s["key"] for s in STRATEGIES]),
-            "symbol": sym, "bias": v["bias"], "tier": v["tier"],
-            "entry": v["entry_price"], "sl": v["stop_loss"], "tp1": v["tp1"], "tp2": v["tp2"],
-            "reasoning": v["reasoning"], "delivered_telegram": random.choice([True, False]),
-            "time": datetime.fromtimestamp(datetime.now().timestamp() - i * 1800, tz=timezone.utc).isoformat(),
-        })
+    for sym in SYMBOLS:
+        try:
+            klines = aggregator.get_klines(sym, timeframe="1m", limit=100)
+        except Exception:
+            klines = None
+        for s in get_all_strategies():
+            try:
+                strat = get_strategy(s["key"])
+                if not klines:
+                    continue
+                r = strat.analyze(sym, klines, params=None)
+                if r and r.bias != "NEUTRAL":
+                    sigs.append({
+                        "strategy": s["key"], "symbol": sym, "bias": r.bias, "tier": r.tier,
+                        "entry": r.entry_price, "sl": r.stop_loss, "tp1": r.tp1, "tp2": r.tp2,
+                        "reasoning": r.reasoning, "delivered_telegram": False,
+                        "time": datetime.now(timezone.utc).isoformat(),
+                    })
+            except Exception:
+                continue
     return sigs
 
 # ─── Telegram ────────────────────────────────────────────────────────────────
@@ -406,6 +476,20 @@ async def ws_market(websocket: WebSocket):
     except: pass
     finally: market_clients.discard(websocket)
 
+_verdict_cache = {}
+_verdict_ts = {}
+
+def get_verdict_cached(sym: str, ttl: float = 20.0):
+    """Real verdict with TTL cache — heavy strategy runs every 20s, not 3s."""
+    now = time.time()
+    if sym in _verdict_cache and now - _verdict_ts.get(sym, 0) < ttl:
+        return _verdict_cache[sym]
+    v = gen_verdict(sym)
+    v["symbol"] = sym
+    _verdict_cache[sym] = v
+    _verdict_ts[sym] = now
+    return v
+
 async def broadcast():
     global connected
     while True:
@@ -413,7 +497,7 @@ async def broadcast():
         for sym in SYMBOLS: PRICES[sym] = gen_price(PRICES[sym])
         if connected:
             for sym in SYMBOLS:
-                v = gen_verdict(sym); v["symbol"] = sym
+                v = get_verdict_cached(sym)
                 payload = json.dumps({"type": "verdict", "symbol": sym, "data": v}, default=str)
                 dead = set()
                 for ws_client in connected:
@@ -458,15 +542,19 @@ def _symbol_payload(sym: str):
         trades = aggregator.get_recent_trades(sym, limit=100)
         ob = aggregator.get_orderbook(sym, limit=5)
         ticker = aggregator.get_ticker(sym)
+        funding = aggregator.get_funding_rate(sym)
         metrics = build_all(sym, klines=klines, trades=trades, ob_snapshots=[ob] if ob else None,
                             mode=aggregator.get_mode())
         best_bid = ob["bids"][0] if ob and ob.get("bids") else [0, 0]
         best_ask = ob["asks"][0] if ob and ob.get("asks") else [0, 0]
         last_k = klines[-1]["close"] if klines else None
         price = last_k if last_k is not None else (ticker.get("last") if ticker else PRICES.get(sym, 0))
+        change_24h = round((klines[-1]["close"] / klines[0]["close"] - 1) * 100, 2) if len(klines) > 1 else 0
         return {
             "symbol": sym,
             "price": price,
+            "change_24h_pct": change_24h,
+            "funding": round((funding.get("rate") or 0) * 100, 4) if funding else 0,
             "cvd": metrics["cvd"]["series"][-1]["cvd"] if metrics["cvd"]["series"] else 0,
             "vwap": (metrics["volume_profile"].get("vwap") or metrics["vwap_line"][-1]["vwap"]) if metrics["vwap_line"] else None,
             "best_bid": best_bid,
