@@ -35,7 +35,8 @@ This starts 3 windows:
 ```bash
 # Terminal 1 — backend
 cd backend
-python mock_server.py          # port 8000
+pip install -r requirements-mock.txt     # light setup, no Docker needed
+python mock_server.py                    # port 8000
 
 # Terminal 2 — optional HL bridge
 python hl_bridge.py 8765
@@ -48,9 +49,10 @@ npm run dev                    # http://localhost:3000
 
 ## Requirements
 
-- Python 3.11+ (`pip install -r backend/requirements.txt` or `pip install fastapi uvicorn httpx ccxt pydantic`)
+- Python 3.11+ (`pip install -r backend/requirements-mock.txt` — light, no Docker needed)
 - Node.js 18+ / 20+ (`npm install` in frontend)
 - Docker NOT required — the mock server runs standalone. `docker-compose.yml` exists for the full-stack (Postgres/Redis) deployment.
+- No `.env` needed — everything works out of the box (LLM key is bundled for the Copilot).
 
 ## API Endpoints
 
