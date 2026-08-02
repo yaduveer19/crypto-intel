@@ -1,4 +1,4 @@
-# Standalone mock server — no Docker, no DB, no Redis needed
+﻿# Standalone mock server â€” no Docker, no DB, no Redis needed
 # python mock_server.py
 
 from fastapi import FastAPI, WebSocket, HTTPException
@@ -24,7 +24,7 @@ SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
 PRICES = {"BTCUSDT": 67500, "ETHUSDT": 3450, "SOLUSDT": 145}
 EXCHANGES = ["binance", "bybit", "okx", "deribit", "hyperliquid"]
 
-# ─── Mock Users ──────────────────────────────────────────────────────────────
+# â”€â”€â”€ Mock Users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 mock_users = {}
 mock_tokens = {}
 
@@ -32,19 +32,19 @@ def gen_price(base): return round(base * (1 + (random.random() - 0.5) * 0.004), 
 def fake_token(): return "mock-jwt-" + str(uuid.uuid4())
 
 STRATEGIES = [
-    {"key": "trend_following", "name": "Trend Following", "description": "EMA crossover trend strategy — buy when fast EMA crosses above slow EMA", "default_params": {"fast_period": 9, "slow_period": 21, "atr_multiplier_sl": 2.0, "atr_multiplier_tp": 3.0}},
-    {"key": "rsi_mean_reversion", "name": "RSI Mean Reversion", "description": "Buy oversold, sell overbought — RSI-based mean reversion", "default_params": {"rsi_period": 14, "oversold": 30, "overbought": 70}},
+    {"key": "trend_following", "name": "Trend Following", "description": "EMA crossover trend strategy â€” buy when fast EMA crosses above slow EMA", "default_params": {"fast_period": 9, "slow_period": 21, "atr_multiplier_sl": 2.0, "atr_multiplier_tp": 3.0}},
+    {"key": "rsi_mean_reversion", "name": "RSI Mean Reversion", "description": "Buy oversold, sell overbought â€” RSI-based mean reversion", "default_params": {"rsi_period": 14, "oversold": 30, "overbought": 70}},
     {"key": "macd_momentum", "name": "MACD Momentum", "description": "MACD line vs signal line crossovers with histogram confirmation", "default_params": {"fast": 12, "slow": 26, "signal": 9}},
-    {"key": "breakout", "name": "Breakout", "description": "Bollinger Band breakout — price breaking above/below bands with volume", "default_params": {"band_period": 20, "band_std": 2.0}},
-    {"key": "grid_levels", "name": "Grid Levels", "description": "Support/resistance grid — identifies key levels for range trading", "default_params": {"lookback": 50, "grid_levels": 5}},
+    {"key": "breakout", "name": "Breakout", "description": "Bollinger Band breakout â€” price breaking above/below bands with volume", "default_params": {"band_period": 20, "band_std": 2.0}},
+    {"key": "grid_levels", "name": "Grid Levels", "description": "Support/resistance grid â€” identifies key levels for range trading", "default_params": {"lookback": 50, "grid_levels": 5}},
     {"key": "vwap_reversion", "name": "VWAP Reversion (Scalp)", "description": "Fade extremes back to VWAP with volume confirmation", "default_params": {"deviation": 0.0025, "atr_multiplier_sl": 1.2, "atr_multiplier_tp": 1.8}},
     {"key": "opening_range_breakout", "name": "Opening Range Breakout (Scalp)", "description": "Break of the session opening range with volume = momentum trade", "default_params": {"range_minutes": 15, "atr_multiplier_sl": 1.5, "atr_multiplier_tp": 2.5}},
-    {"key": "cvd_divergence", "name": "CVD Divergence (Scalp)", "description": "Price vs cumulative volume delta divergence — smart money moves", "default_params": {"lookback": 30, "atr_multiplier_sl": 1.5, "atr_multiplier_tp": 2.5}},
+    {"key": "cvd_divergence", "name": "CVD Divergence (Scalp)", "description": "Price vs cumulative volume delta divergence â€” smart money moves", "default_params": {"lookback": 30, "atr_multiplier_sl": 1.5, "atr_multiplier_tp": 2.5}},
     {"key": "order_flow_momentum", "name": "Order Flow Momentum (Scalp)", "description": "Tape aggression ratio and delta bars for momentum entries", "default_params": {"aggression_threshold": 0.55, "atr_multiplier_sl": 1.2, "atr_multiplier_tp": 2.0}},
 ]
 
 def gen_verdict(sym):
-    """Real verdict — runs ALL registered strategies on live klines, synthesizes consensus."""
+    """Real verdict â€” runs ALL registered strategies on live klines, synthesizes consensus."""
     price = PRICES.get(sym, 50000)
     try:
         klines = aggregator.get_klines(sym, timeframe="1m", limit=100)
@@ -62,7 +62,7 @@ def gen_verdict(sym):
             except Exception:
                 continue
         if not results:
-            # market stats fallback — trend + flow read
+            # market stats fallback â€” trend + flow read
             closes = [k["close"] for k in klines]
             ema_fast = sum(closes[-9:]) / 9
             ema_slow = sum(closes[-21:]) / 21
@@ -72,7 +72,7 @@ def gen_verdict(sym):
                     "stop_loss": round(price - atr * 2 if bias == "BULL" else price + atr * 2, 2),
                     "tp1": round(price + atr * 3 if bias == "BULL" else price - atr * 3, 2),
                     "tp2": round(price + atr * 6 if bias == "BULL" else price - atr * 6, 2),
-                    "reasoning": f"EMA trend read: {'uptrend' if bias=='BULL' else 'downtrend'} on 9/21. No strategy triggered — momentum baseline."}
+                    "reasoning": f"EMA trend read: {'uptrend' if bias=='BULL' else 'downtrend'} on 9/21. No strategy triggered â€” momentum baseline."}
         bulls = sum(1 for r in results if r.bias == "BULL")
         bears = sum(1 for r in results if r.bias == "BEAR")
         bias = "BULL" if bulls > bears else ("BEAR" if bears > bulls else "NEUTRAL")
@@ -94,7 +94,7 @@ def gen_verdict(sym):
                 "stop_loss": round(price * 0.98, 2), "tp1": round(price * 1.02, 2), "tp2": round(price * 1.04, 2),
                 "reasoning": f"Verdict engine error: {e}"}
 
-# ─── Auth ────────────────────────────────────────────────────────────────────
+# â”€â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.post("/api/auth/register")
 async def register(body: dict):
     email = body.get("email", "")
@@ -122,10 +122,10 @@ async def login(body: dict):
 async def get_me():
     return {"id": 1, "email": "demo@cryptointel.io", "name": "Demo User", "plan": "pro", "created_at": datetime.now(timezone.utc).isoformat()}
 
-# ─── Strategies ──────────────────────────────────────────────────────────────
+# â”€â”€â”€ Strategies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/strategies/list")
-async def list_strategies():
+def list_strategies():
     return get_all_strategies()
 
 @app.get("/api/strategies/my")
@@ -141,7 +141,7 @@ async def configure_strategy(body: dict):
     return {"status": "ok", "message": f"Strategy '{body.get('strategy_key')}' configured for {body.get('symbol','')}"}
 
 @app.post("/api/strategies/run-all")
-async def run_all():
+def run_all():
     """Run every registered strategy on every symbol against live klines."""
     results = []
     seen = set()
@@ -172,9 +172,10 @@ async def run_all():
     return {"status": "ok", "signals_generated": len(results), "results": results}
 
 @app.get("/api/strategies/signals")
-async def get_signals():
+def get_signals():
     """Latest signals from the real strategy engine."""
     sigs = []
+    sig_id = 1
     for sym in SYMBOLS:
         try:
             klines = aggregator.get_klines(sym, timeframe="1m", limit=100)
@@ -188,16 +189,17 @@ async def get_signals():
                 r = strat.analyze(sym, klines, params=None)
                 if r and r.bias != "NEUTRAL":
                     sigs.append({
-                        "strategy": s["key"], "symbol": sym, "bias": r.bias, "tier": r.tier,
+                        "id": sig_id, "strategy": s["key"], "symbol": sym, "bias": r.bias, "tier": r.tier,
                         "entry": r.entry_price, "sl": r.stop_loss, "tp1": r.tp1, "tp2": r.tp2,
                         "reasoning": r.reasoning, "delivered_telegram": False,
                         "time": datetime.now(timezone.utc).isoformat(),
                     })
+                    sig_id += 1
             except Exception:
                 continue
     return sigs
 
-# ─── Telegram ────────────────────────────────────────────────────────────────
+# â”€â”€â”€ Telegram â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/telegram/status")
 async def tg_status():
@@ -211,14 +213,14 @@ async def tg_connect(body: dict):
 async def tg_disconnect():
     return {"status": "ok", "message": "Telegram disconnected"}
 
-# ─── Core API ────────────────────────────────────────────────────────────────
+# â”€â”€â”€ Core API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "crypto-intel-v3"}
 
 @app.get("/api/verdict/{symbol}")
-async def get_verdict(symbol: str):
+def get_verdict(symbol: str):
     sym = symbol.upper()
     if "USDT" not in sym: sym += "USDT"
     v = gen_verdict(sym)
@@ -243,7 +245,7 @@ async def get_lanes(symbol: str):
     ]
 
 @app.get("/api/price/{symbol}")
-async def get_price(symbol: str):
+def get_price(symbol: str):
     sym = symbol.upper()
     if "USDT" not in sym: sym += "USDT"
     if sym in PRICES: PRICES[sym] = gen_price(PRICES[sym])
@@ -278,7 +280,7 @@ async def copilot(body: dict):
             json={
                 "model": "agnes-2.0-flash",
                 "messages": [
-                    {"role": "system", "content": f"You are Crypto Intel AI — an elite crypto trading assistant and market analyst. You have deep expertise in: technical analysis (RSI, MACD, EMA, Bollinger Bands, S/R), on-chain metrics, derivatives (funding, OI, liquidations), macro (DXY, Fed, gold), and narratives (ETF flows, regulation, L1/L2 trends). {price_context} Be confident, data-driven, and specific. Use real price levels. Always end trading analysis with: '⚠️ Not financial advice. DYOR.'"},
+                    {"role": "system", "content": f"You are Crypto Intel AI â€” an elite crypto trading assistant and market analyst. You have deep expertise in: technical analysis (RSI, MACD, EMA, Bollinger Bands, S/R), on-chain metrics, derivatives (funding, OI, liquidations), macro (DXY, Fed, gold), and narratives (ETF flows, regulation, L1/L2 trends). {price_context} Be confident, data-driven, and specific. Use real price levels. Always end trading analysis with: 'âš ï¸ Not financial advice. DYOR.'"},
                     {"role": "user", "content": message},
                 ],
                 "temperature": 0.5, "max_tokens": 800,
@@ -307,10 +309,10 @@ async def simulate(body: dict):
             {"symbol": "ETHUSDT", "estimated_move_pct": round(shock * 0.82, 2), "estimated_price": round(PRICES.get("ETHUSDT",3000)*(1+shock/100*0.82),2)},
             {"symbol": "SOLUSDT", "estimated_move_pct": round(shock * 0.68, 2), "estimated_price": round(PRICES.get("SOLUSDT",140)*(1+shock/100*0.68),2)},
         ], "stop_losses_triggered": [], "timestamp": datetime.now(timezone.utc).isoformat(),
-        "disclaimer": "Simulated — not financial advice.",
+        "disclaimer": "Simulated â€” not financial advice.",
     }
 
-# ─── v4: Multi-exchange & microstructure ─────────────────────────────────────
+# â”€â”€â”€ v4: Multi-exchange & microstructure â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _symbol(sym: str) -> str:
     s = sym.upper()
@@ -431,7 +433,7 @@ async def copilot_analyze_markets():
             headers={"Authorization": "Bearer sk-BP2U8RoftMRtikEphIw2d8QB0PtUYnYmlPhLylvMuVnJVNDf", "Content-Type": "application/json"},
             json={"model": "agnes-2.0-flash",
                   "messages": [
-                      {"role": "system", "content": "You are Crypto Intel's market-wide scanner — a professional crypto analyst. Output: per-symbol verdict lines (SYMBOL: LONG/SHORT/WAIT — conviction 0-100 — reasoning — key levels), then a 'BEST TRADE TODAY:' line. Be specific with numbers. End with: ⚠️ Not financial advice. DYOR."},
+                      {"role": "system", "content": "You are Crypto Intel's market-wide scanner â€” a professional crypto analyst. Output: per-symbol verdict lines (SYMBOL: LONG/SHORT/WAIT â€” conviction 0-100 â€” reasoning â€” key levels), then a 'BEST TRADE TODAY:' line. Be specific with numbers. End with: âš ï¸ Not financial advice. DYOR."},
                       {"role": "user", "content": prompt},
                   ],
                   "temperature": 0.4, "max_tokens": 1000},
@@ -445,7 +447,7 @@ async def copilot_analyze_markets():
         reply = f"Service unavailable: {e}"
     return {"reply": reply, "snapshot": snap, "mode": aggregator.get_mode(), "time": datetime.now(timezone.utc).isoformat()}
 
-# ─── WebSocket ───────────────────────────────────────────────────────────────
+# â”€â”€â”€ WebSocket â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 connected = set()
 market_clients = set()
@@ -480,7 +482,7 @@ _verdict_cache = {}
 _verdict_ts = {}
 
 def get_verdict_cached(sym: str, ttl: float = 20.0):
-    """Real verdict with TTL cache — heavy strategy runs every 20s, not 3s."""
+    """Real verdict with TTL cache â€” heavy strategy runs every 20s, not 3s."""
     now = time.time()
     if sym in _verdict_cache and now - _verdict_ts.get(sym, 0) < ttl:
         return _verdict_cache[sym]
@@ -513,7 +515,7 @@ async def start_broadcaster():
     _background_tasks.append(asyncio.create_task(market_broadcast()))
 
 async def market_broadcast():
-    """Live market stream — price, CVD, VWAP, top-of-book per symbol, every 2s."""
+    """Live market stream â€” price, CVD, VWAP, top-of-book per symbol, every 2s."""
     global market_clients
     while True:
         try:
@@ -572,3 +574,4 @@ if __name__ == "__main__":
     print(f"[Crypto Intel v4] Dashboard: http://localhost:3000")
     print(f"[Crypto Intel v4] API Docs:  http://localhost:{port}/docs")
     uvicorn.run(app, host="0.0.0.0", port=port)
+

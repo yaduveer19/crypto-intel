@@ -20,17 +20,21 @@ export default function VolumeProfileChart({ symbol }: { symbol: string }) {
   const vwap = data?.vwap
   const vwapLine = data?.vwap_line || []
 
-  const maxVol = Math.max(...levels.map((l: any) => l.volume), 1e-9)
+  const maxVol = Math.max(...levels.map((l: any) => Number(l.volume) || 0), 1e-9)
 
-  const fmt = (n: number) => n > 1000 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 }) : n.toFixed(2)
+  const fmt = (n: any) => {
+    const v = Number(n)
+    if (n == null || isNaN(v)) return '—'
+    return v > 1000 ? v.toLocaleString(undefined, { maximumFractionDigits: 0 }) : v.toFixed(2)
+  }
 
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-white">📊 Volume Profile & VWAP</h3>
         <div className="text-[10px] text-text-secondary">
-          POC <span className="text-accent-yellow font-mono">{fmt(poc)}</span>
-          {vwap && <span className="ml-2">VWAP <span className="text-accent-blue font-mono">{fmt(vwap)}</span></span>}
+          POC <span className="text-accent-yellow font-mono">{poc != null ? fmt(poc) : '—'}</span>
+          {vwap != null && <span className="ml-2">VWAP <span className="text-accent-blue font-mono">{fmt(vwap)}</span></span>}
         </div>
       </div>
 
@@ -47,6 +51,8 @@ export default function VolumeProfileChart({ symbol }: { symbol: string }) {
             )}
             <div className="space-y-[2px] max-h-64 overflow-y-auto pr-1">
               {levels.slice().reverse().map((l: any, i: number) => {
+                const vol = Number(l.volume) || 0
+                const buyPct = Number(l.buy_pct)
                 const inVA = va?.high != null && l.price >= va.low && l.price <= va.high
                 const isPOC = l.price === poc
                 return (
@@ -54,12 +60,12 @@ export default function VolumeProfileChart({ symbol }: { symbol: string }) {
                     <span className="w-16 text-text-secondary font-mono text-right">{fmt(l.price)}</span>
                     <div className="flex-1 h-2.5 bg-dark-700 rounded overflow-hidden">
                       <div
-                        className={`h-full rounded ${inVA ? (l.buy_pct >= 50 ? 'bg-accent-green/60' : 'bg-accent-red/60') : 'bg-dark-500'}`}
-                        style={{ width: `${(l.volume / maxVol) * 100}%` }}
+                        className={`h-full rounded ${inVA ? (buyPct >= 50 ? 'bg-accent-green/60' : 'bg-accent-red/60') : 'bg-dark-500'}`}
+                        style={{ width: `${(vol / maxVol) * 100}%` }}
                       />
                     </div>
-                    <span className="w-10 text-text-secondary font-mono">{l.volume >= 1000 ? `${(l.volume/1000).toFixed(1)}K` : l.volume.toFixed(1)}</span>
-                    <span className={`w-8 text-[9px] ${l.buy_pct >= 50 ? 'text-accent-green' : 'text-accent-red'}`}>{l.buy_pct}%B</span>
+                    <span className="w-10 text-text-secondary font-mono">{vol >= 1000 ? `${(vol/1000).toFixed(1)}K` : vol.toFixed(1)}</span>
+                    <span className={`w-8 text-[9px] ${buyPct >= 50 ? 'text-accent-green' : 'text-accent-red'}`}>{buyPct.toFixed(0)}%B</span>
                     {isPOC && <span className="text-[9px] text-accent-yellow font-bold">POC</span>}
                   </div>
                 )

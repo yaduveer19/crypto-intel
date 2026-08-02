@@ -20,7 +20,11 @@ export default function FootprintPanel({ symbol }: { symbol: string }) {
   const timeBins: number[] = [...new Set(footprint.map((f: any) => f.time_bin))]
   const maxTpo = Math.max(...tpo.map((t: any) => t.tpo_count), 1)
 
-  const fmt = (n: number) => n >= 1000 ? `${(n/1000).toFixed(1)}K` : n.toFixed(2)
+  const fmt = (n: any) => {
+    const v = Number(n)
+    if (n == null || isNaN(v)) return '—'
+    return v >= 1000 ? `${(v/1000).toFixed(1)}K` : v.toFixed(2)
+  }
 
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">

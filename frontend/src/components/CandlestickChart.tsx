@@ -34,8 +34,10 @@ export default function CandlestickChart({ symbol, exchange }: { symbol: string;
     if (!bars.length) return null
     let min = Infinity, max = -Infinity
     for (const k of bars) {
+      if (k == null || k.high == null || k.low == null) continue
       min = Math.min(min, k.low); max = Math.max(max, k.high)
     }
+    if (!isFinite(min) || !isFinite(max)) return null
     const range = max - min || 1
     const yMin = min - range * 0.06
     const yMax = max + range * 0.06

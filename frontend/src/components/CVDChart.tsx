@@ -18,15 +18,17 @@ export default function CVDChart({ symbol }: { symbol: string }) {
   const delta = data?.cvd?.delta_profile || []
   const signal = data?.cvd?.signal
 
+  const num = (n: any) => { const v = Number(n); return isNaN(v) ? 0 : v }
+
   const chartData = series.slice(-100).map((p: any) => ({
-    time: new Date(p.time * 1000).toLocaleTimeString(),
-    cvd: Number(p.cvd.toFixed(2)),
+    time: new Date(num(p.time) * 1000).toLocaleTimeString(),
+    cvd: Number(num(p.cvd).toFixed(2)),
   }))
 
   const deltaData = delta.map((d: any) => ({
     name: `B${d.bin}`,
-    delta: Number(d.net_delta.toFixed(2)),
-    vol: Number(d.volume.toFixed(2)),
+    delta: Number(num(d.net_delta).toFixed(2)),
+    vol: Number(num(d.volume).toFixed(2)),
   }))
 
   return (
@@ -88,7 +90,7 @@ export default function CVDChart({ symbol }: { symbol: string }) {
               <span className={signal.divergence === 'bullish' ? 'text-accent-green' : signal.divergence === 'bearish' ? 'text-accent-red' : 'text-text-secondary'}>
                 {signal.message}
               </span>
-              {signal.strength > 0 && <span className="ml-2">strength {(signal.strength * 100).toFixed(0)}%</span>}
+              {signal.strength > 0 && <span className="ml-2">strength {(num(signal.strength) * 100).toFixed(0)}%</span>}
             </p>
           )}
         </>

@@ -36,6 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .catch(() => { localStorage.removeItem('token'); setToken(null) })
         .finally(() => setLoading(false))
     } else {
+      // Login bypass: demo session so all pages work without auth
+      setToken('demo-session')
+      setUser({ id: 1, email: 'demo@cryptointel.io', name: 'Demo User', plan: 'pro' })
       setLoading(false)
     }
   }, [])
