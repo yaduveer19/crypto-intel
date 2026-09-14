@@ -391,6 +391,94 @@ async def get_heatmap(symbol: str):
     hm["mode"] = aggregator.get_mode()
     return hm
 
+# ─── Advanced Intel (footprint, liquidations, patterns, funding, on-chain, macro, news) ──
+
+from app.intel.funding_matrix import get_funding_matrix
+from app.intel.onchain import get_onchain, get_whales_local
+from app.intel.macro import get_macro
+from app.intel.news import get_news
+from app.intel.patterns import get_patterns
+from app.intel import liquidations as liq
+
+@app.get("/api/intel/funding-matrix")
+def api_funding_matrix():
+    return get_funding_matrix()
+
+@app.get("/api/intel/onchain")
+async def api_onchain():
+    import asyncio
+    return await asyncio.to_thread(get_onchain)
+
+@app.get("/api/intel/macro")
+def api_macro(symbol: str = "BTCUSDT"):
+    try:
+        _, _, _ = None, None, None
+        k = aggregator.get_klines(_symbol(symbol), timeframe="1d", limit=90)
+    except Exception:
+        k = None
+    return get_macro(k)
+
+@app.get("/api/intel/news")
+def api_news():
+    return get_news()
+
+@app.get("/api/intel/patterns/{symbol}")
+async def api_patterns(symbol: str, timeframe: str = "1h", limit: int = 120):
+    import asyncio
+    sym = _symbol(symbol)
+    klines = await asyncio.to_thread(aggregator.get_klines, sym, timeframe=timeframe, limit=limit)
+    return get_patterns(sym, klines)
+
+@app.get("/api/intel/liquidations/{symbol}")
+def api_liquidations(symbol: str):
+    return liq.get_liquidations(symbol)
+
+@app.get("/api/intel/footprint/{symbol}")
+async def api_footprint_real(symbol: str, limit: int = 800):
+    sym = _symbol(symbol)
+    import asyncio
+    trades = await asyncio.to_thread(aggregator.get_recent_trades, sym, None, limit)
+    from app.intel.footprint_real import build_footprint
+    fp = build_footprint(trades)
+    fp["symbol"] = sym
+    fp["mode"] = aggregator.get_mode()
+    return fp
+
+@app.get("/api/intel/whale-walls/{symbol}")
+async def api_whale_walls(symbol: str, min_usd: float = 250000, depth: int = 60):
+    """Real orderbook walls — levels with notional >= threshold."""
+    sym = _symbol(symbol)
+    import asyncio
+    ob = await asyncio.to_thread(aggregator.get_orderbook, sym, None, depth)
+    walls = []
+    def _scan(levels, side):
+        for lvl in levels:
+            try:
+                px, qty = float(lvl[0]), float(lvl[1])
+            except Exception:
+                continue
+            usd = px * qty
+            if usd >= min_usd:
+                walls.append({"price": px, "qty": round(qty, 4), "notional_usd": round(usd, 0),
+                              "side": side, "dist_pct": None})
+    _scan((ob or {}).get("bids", []), "BID")
+    _scan((ob or {}).get("asks", []), "ASK")
+    bid_usd = sum(w["notional_usd"] for w in walls if w["side"] == "BID")
+    ask_usd = sum(w["notional_usd"] for w in walls if w["side"] == "ASK")
+    mid = None
+    try:
+        mid = (ob["bids"][0][0] + ob["asks"][0][0]) / 2
+    except Exception:
+        pass
+    if mid:
+        for w in walls:
+            w["dist_pct"] = round((w["price"] / mid - 1) * 100, 3)
+    walls.sort(key=lambda w: w["notional_usd"], reverse=True)
+    return {"symbol": sym, "walls": walls[:30], "mid": mid, "threshold_usd": min_usd,
+            "buy_wall_usd": round(bid_usd, 0), "sell_wall_usd": round(ask_usd, 0),
+            "bias": "BID_HEAVY" if bid_usd > ask_usd * 1.2 else "ASK_HEAVY" if ask_usd > bid_usd * 1.2 else "BALANCED",
+            "live": aggregator.get_mode() == "live", "count": len(walls)}
+
 def _market_snapshot():
     """Compact per-symbol technical context for the LLM."""
     snap = {}
@@ -513,6 +601,10 @@ _background_tasks = []
 async def start_broadcaster():
     _background_tasks.append(asyncio.create_task(broadcast()))
     _background_tasks.append(asyncio.create_task(market_broadcast()))
+    try:
+        liq.start()  # background Binance forceOrder liquidation feed
+    except Exception:
+        pass
 
 async def market_broadcast():
     """Live market stream â€” price, CVD, VWAP, top-of-book per symbol, every 2s."""

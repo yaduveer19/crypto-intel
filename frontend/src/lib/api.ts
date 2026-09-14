@@ -46,6 +46,40 @@ export async function getOrderbookHeatmap(symbol: string) {
   return fetchJSON(`${API}/api/orderbook-heatmap/${symbol}`)
 }
 
+// ─── v4.1: Advanced Intel ───────────────────────────────────────────────────
+
+export async function getFundingMatrix() {
+  return fetchJSON(`${API}/api/intel/funding-matrix`)
+}
+
+export async function getOnchain() {
+  return fetchJSON(`${API}/api/intel/onchain`)
+}
+
+export async function getMacro() {
+  return fetchJSON(`${API}/api/intel/macro`)
+}
+
+export async function getIntelNews() {
+  return fetchJSON(`${API}/api/intel/news`)
+}
+
+export async function getIntelPatterns(symbol: string) {
+  return fetchJSON(`${API}/api/intel/patterns/${symbol}`)
+}
+
+export async function getLiquidations(symbol: string) {
+  return fetchJSON(`${API}/api/intel/liquidations/${symbol}`)
+}
+
+export async function getRealFootprint(symbol: string, limit = 800) {
+  return fetchJSON(`${API}/api/intel/footprint/${symbol}?limit=${limit}`)
+}
+
+export async function getWhaleWalls(symbol: string, minUsd = 250000) {
+  return fetchJSON(`${API}/api/intel/whale-walls/${symbol}?min_usd=${minUsd}`)
+}
+
 export async function copilotAnalyzeMarkets() {
   const res = await fetch(`${API}/api/copilot/analyze`, { method: 'POST' })
   return res.json()
