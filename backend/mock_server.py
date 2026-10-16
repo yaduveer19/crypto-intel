@@ -169,6 +169,14 @@ def run_all():
                     })
             except Exception:
                 continue
+    # deeepr-style: auto-deliver top signals on Telegram when connected
+    try:
+        if tg.status().get("connected"):
+            for r in results[:3]:
+                if tg.send_signal(r).get("sent"):
+                    r["delivered_telegram"] = True
+    except Exception:
+        pass
     return {"status": "ok", "signals_generated": len(results), "results": results}
 
 @app.get("/api/strategies/signals")
@@ -201,17 +209,23 @@ def get_signals():
 
 # â”€â”€â”€ Telegram â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+from app.deeepr import telegram as tg
+
 @app.get("/api/telegram/status")
-async def tg_status():
-    return {"connected": False}
+def tg_status():
+    return tg.status()
 
 @app.post("/api/telegram/connect")
-async def tg_connect(body: dict):
-    return {"status": "ok", "message": "Telegram connected! Test message sent."}
+def tg_connect(body: dict):
+    return tg.connect(body.get("bot_token", ""), str(body.get("chat_id", "")))
 
 @app.post("/api/telegram/disconnect")
-async def tg_disconnect():
-    return {"status": "ok", "message": "Telegram disconnected"}
+def tg_disconnect():
+    return tg.disconnect()
+
+@app.post("/api/telegram/send")
+def tg_send(body: dict):
+    return tg.send(body.get("message", "Crypto Intel test message"))
 
 # â”€â”€â”€ Core API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -227,22 +241,6 @@ def get_verdict(symbol: str):
     v["symbol"] = sym
     v["time"] = datetime.now(timezone.utc).isoformat()
     return v
-
-@app.get("/api/lanes/{symbol}")
-async def get_lanes(symbol: str):
-    s = symbol.upper()
-    return [
-        {"lane": "technical", "symbol": s, "bias": random.choice(["BULL","BEAR","NEUTRAL"]), "tier": random.choice(["HIGH","MOD","LOW"]),
-         "signals": ["EMA200 support", f"RSI {random.randint(40,70)}", "MACD flattening"], "time": datetime.now(timezone.utc).isoformat()},
-        {"lane": "flow", "symbol": s, "bias": random.choice(["BULL","BEAR","NEUTRAL"]), "tier": random.choice(["HIGH","MOD","LOW"]),
-         "signals": [f"Funding {random.uniform(-0.01,0.01):+.4f}%", f"OI {random.choice(['+','-'])}{random.uniform(0,5):.1f}%"],
-         "time": datetime.now(timezone.utc).isoformat()},
-        {"lane": "narrative", "symbol": "GLOBAL", "bias": random.choice(["BULL","BEAR","NEUTRAL"]), "tier": random.choice(["HIGH","MOD","LOW"]),
-         "signals": ["ETF inflows", "regulatory clarity"], "time": datetime.now(timezone.utc).isoformat()},
-        {"lane": "macro", "symbol": "GLOBAL", "bias": random.choice(["BULL","BEAR","NEUTRAL"]), "tier": random.choice(["HIGH","MOD","LOW"]),
-         "signals": [f"DXY {random.uniform(102,106):.1f}", f"Gold ${random.randint(2300,2500)}"],
-         "time": datetime.now(timezone.utc).isoformat()},
-    ]
 
 @app.get("/api/price/{symbol}")
 def get_price(symbol: str):
@@ -278,7 +276,7 @@ async def copilot(body: dict):
             "https://apihub.agnes-ai.com/v1/chat/completions",
             headers={"Authorization": "Bearer sk-BP2U8RoftMRtikEphIw2d8QB0PtUYnYmlPhLylvMuVnJVNDf", "Content-Type": "application/json"},
             json={
-                "model": "agnes-2.0-flash",
+                "model": "agnes-3.0-flash",
                 "messages": [
                     {"role": "system", "content": f"You are Crypto Intel AI â€” an elite crypto trading assistant and market analyst. You have deep expertise in: technical analysis (RSI, MACD, EMA, Bollinger Bands, S/R), on-chain metrics, derivatives (funding, OI, liquidations), macro (DXY, Fed, gold), and narratives (ETF flows, regulation, L1/L2 trends). {price_context} Be confident, data-driven, and specific. Use real price levels. Always end trading analysis with: 'âš ï¸ Not financial advice. DYOR.'"},
                     {"role": "user", "content": message},
@@ -479,6 +477,155 @@ async def api_whale_walls(symbol: str, min_usd: float = 250000, depth: int = 60)
             "bias": "BID_HEAVY" if bid_usd > ask_usd * 1.2 else "ASK_HEAVY" if ask_usd > bid_usd * 1.2 else "BALANCED",
             "live": aggregator.get_mode() == "live", "count": len(walls)}
 
+# ─── Deeepr-parity: Analyze / Compile / Backtest / Paper / Sessions / Brief ──
+
+from app.deeepr import analyze as da
+from app.deeepr import backtest as dbt
+from app.deeepr import paper as dpaper
+from app.deeepr import sessions as dsess
+from app.deeepr import brief as dbrief
+from app.deeepr import grading as dgrade
+from app.deeepr import derivatives as dderiv
+
+@app.get("/api/analyze/{symbol}")
+def api_analyze(symbol: str, timeframe: str = "1h"):
+    """4-lane analysis (TECH/FLOW/NEWS/MACRO) → one verdict + levels."""
+    return da.analyze(_symbol(symbol), timeframe)
+
+@app.get("/api/lanes/{symbol}")
+def get_lanes(symbol: str, timeframe: str = "1h"):
+    """Real 4-lane read (was random mock) — same call as analyze, old shape mapped."""
+    sym = _symbol(symbol)
+    a = da.analyze(sym, timeframe)
+    out = []
+    for l in a["lanes"]:
+        out.append({
+            "lane": l["key"], "symbol": sym if l["key"] in ("tech", "flow") else "GLOBAL",
+            "bias": "BULL" if l["bias"] == 1 else ("BEAR" if l["bias"] == -1 else "NEUTRAL"),
+            "tier": "HIGH" if abs(l["score"]) >= 0.6 else ("MOD" if abs(l["score"]) >= 0.3 else "LOW"),
+            "signals": l["signals"], "time": datetime.now(timezone.utc).isoformat(),
+            "state": l["state"], "score": l["score"], "letter": l["letter"], "label": l["label"],
+        })
+    return out
+
+@app.post("/api/strategies/compile")
+def api_compile(body: dict):
+    """Plain English → exact rules JSON (LLM with deterministic fallback)."""
+    text = (body.get("text") or "").strip()
+    if not text:
+        raise HTTPException(400, "text is required")
+    return dbt.compile_text(text)
+
+@app.post("/api/backtest")
+def api_backtest(body: dict):
+    """Replay rules on REAL candles → stats, trades, equity curve."""
+    rules = body.get("rules") or {}
+    if not rules.get("entry"):
+        raise HTTPException(400, "rules.entry conditions required")
+    sym = _symbol(body.get("symbol", "BTCUSDT"))
+    tf = body.get("tf") or rules.get("tf") or "1h"
+    capital = float(body.get("capital", 10000))
+    limit = min(int(body.get("limit", 500)), 1000)
+    klines = aggregator.get_klines(sym, timeframe=tf, limit=limit)
+    if not klines:
+        raise HTTPException(502, "No kline data from exchange")
+    return dbt.run_backtest(rules, klines, capital)
+
+@app.get("/api/strategies/templates")
+def api_templates():
+    return {"templates": dbt.TEMPLATES}
+
+@app.get("/api/paper/state")
+def api_paper_state():
+    return dpaper.get_state()
+
+@app.post("/api/paper/open")
+def api_paper_open(body: dict):
+    return dpaper.open_position(body.get("symbol", "BTCUSDT"), body.get("side", "long"),
+                                float(body.get("usd", 0)),
+                                body.get("sl"), body.get("tp"))
+
+@app.post("/api/paper/close")
+def api_paper_close(body: dict):
+    return dpaper.close_position(body.get("id", ""), body.get("reason", "manual"))
+
+@app.post("/api/paper/reset")
+def api_paper_reset():
+    return dpaper.reset()
+
+@app.get("/api/market-sessions")
+def api_sessions(symbol: str = "BTCUSDT"):
+    return dsess.get_sessions(_symbol(symbol))
+
+@app.get("/api/brief")
+def api_brief():
+    """Daily market brief — real snapshot through LLM (template fallback)."""
+    return dbrief.get_brief()
+
+@app.get("/api/signals/graded")
+def api_graded(symbol: str = "BTCUSDT", strategy: str = "trend_following", timeframe: str = "15m"):
+    """Every historical call graded: TARGET_HIT / STOP_HIT / OPEN."""
+    return dgrade.grade_signals(_symbol(symbol), strategy, timeframe)
+
+@app.post("/api/scenarios/simulate")
+def api_scenario(body: dict):
+    """Shock grid vs live paper positions — who survives, whose SL fires."""
+    try:
+        shocks = [float(s) for s in (body.get("shocks") or [-10, -5, -2, -1, 1, 2, 5, 10])]
+    except Exception:
+        shocks = [-10, -5, -2, -1, 1, 2, 5, 10]
+    st = dpaper.get_state()
+    positions = st.get("positions") or []
+    equity = st.get("equity") or 0
+    fallback_value = float(body.get("portfolio_value", 0)) or (equity if equity else 10000)
+    grid = []
+    for s in shocks:
+        pnl, triggers = 0.0, []
+        for p in positions:
+            mark = p.get("mark") or p.get("entry") or 0
+            new_px = mark * (1 + s / 100)
+            if p.get("side") == "long":
+                pnl += p.get("notional", 0) * (s / 100)
+                if p.get("sl") and new_px <= p["sl"]:
+                    triggers.append({"id": p["id"], "symbol": p["symbol"], "note": "SL would trigger"})
+            else:
+                pnl -= p.get("notional", 0) * (s / 100)
+                if p.get("sl") and new_px >= p["sl"]:
+                    triggers.append({"id": p["id"], "symbol": p["symbol"], "note": "SL would trigger"})
+        if not positions:
+            pnl = fallback_value * (s / 100)
+        grid.append({
+            "shock_pct": s,
+            "positions_pnl": round(pnl, 2),
+            "equity_after": round(equity + pnl, 2) if positions else round(fallback_value + pnl, 2),
+            "equity_change_pct": round(pnl / (equity or fallback_value) * 100, 2),
+            "sl_triggers": triggers,
+        })
+    return {
+        "mode": "paper" if positions else "reference",
+        "open_positions": len(positions),
+        "equity_now": equity,
+        "grid": grid,
+        "cross_asset_estimate": [
+            {"symbol": "ETHUSDT", "beta": 0.85, "note": "estimated beta"},
+            {"symbol": "SOLUSDT", "beta": 0.70, "note": "estimated beta"},
+        ],
+        "disclaimer": "Simulated — not financial advice.",
+        "time": datetime.now(timezone.utc).isoformat(),
+    }
+
+@app.get("/api/intel/oi-series")
+def api_oi(symbol: str = "BTCUSDT", period: str = "1h", limit: int = 48):
+    return dderiv.oi_series(_symbol(symbol), period, limit)
+
+@app.get("/api/intel/taker-volume")
+def api_taker(symbol: str = "BTCUSDT", period: str = "1h", limit: int = 24):
+    return dderiv.taker_volume(_symbol(symbol), period, limit)
+
+@app.get("/api/intel/coinbase-premium")
+def api_cb_premium():
+    return dderiv.coinbase_premium()
+
 def _market_snapshot():
     """Compact per-symbol technical context for the LLM."""
     snap = {}
@@ -519,7 +666,7 @@ async def copilot_analyze_markets():
         resp = httpx.post(
             "https://apihub.agnes-ai.com/v1/chat/completions",
             headers={"Authorization": "Bearer sk-BP2U8RoftMRtikEphIw2d8QB0PtUYnYmlPhLylvMuVnJVNDf", "Content-Type": "application/json"},
-            json={"model": "agnes-2.0-flash",
+            json={"model": "agnes-3.0-flash",
                   "messages": [
                       {"role": "system", "content": "You are Crypto Intel's market-wide scanner â€” a professional crypto analyst. Output: per-symbol verdict lines (SYMBOL: LONG/SHORT/WAIT â€” conviction 0-100 â€” reasoning â€” key levels), then a 'BEST TRADE TODAY:' line. Be specific with numbers. End with: âš ï¸ Not financial advice. DYOR."},
                       {"role": "user", "content": prompt},

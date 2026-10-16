@@ -7,7 +7,7 @@ import CopilotChat from '@/components/CopilotChat'
 import SimulatorPanel from '@/components/SimulatorPanel'
 import MarketScanner from '@/components/MarketScanner'
 import LiveModeBadge from '@/components/LiveModeBadge'
-import { createMarketWebSocket, getVerdict, getLanes, getSignalHistory } from '@/lib/api'
+import { createMarketWebSocket, getVerdict, getLanes, getSignalHistory, getBrief, getMarketSessions } from '@/lib/api'
 
 const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -30,6 +30,23 @@ const fmtPrice = (p?: number) => {
   return p > 1000 ? `$${p.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : `$${p.toFixed(2)}`
 }
 
+const boldify = (t: string) =>
+  t.split(/\*\*(.+?)\*\*/g).map((part, i) => i % 2 === 1
+    ? <strong key={i} className="text-white font-semibold">{part}</strong>
+    : <span key={i}>{part}</span>)
+
+const BriefBody = ({ text }: { text: string }) => (
+  <>
+    {text.split('\n').filter(l => l.trim()).map((line, i) => {
+      const l = line.trim()
+      if (l.startsWith('# ')) return <h4 key={i} className="text-white font-semibold text-sm mt-2">{boldify(l.slice(2))}</h4>
+      if (l.startsWith('## ')) return <h5 key={i} className="text-accent-blue font-semibold text-xs uppercase tracking-wider mt-2">{boldify(l.slice(3))}</h5>
+      if (/^[-*•]\s/.test(l)) return <div key={i} className="text-text-secondary text-xs flex gap-2"><span className="text-accent-purple">•</span><span>{boldify(l.replace(/^[-*•]\s/, ''))}</span></div>
+      return <p key={i} className="text-text-secondary text-xs leading-relaxed">{boldify(l)}</p>
+    })}
+  </>
+)
+
 export default function DashboardPage() {
   const [markets, setMarkets] = useState<Record<string, MarketInfo>>({})
   const [verdicts, setVerdicts] = useState<Record<string, any>>({})
@@ -38,6 +55,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [history, setHistory] = useState<any[]>([])
   const [wsLive, setWsLive] = useState(false)
+  const [brief, setBrief] = useState<{ brief?: string; source?: string } | null>(null)
+  const [sessions, setSessions] = useState<any>(null)
   const lastUpdate = useRef<Record<string, number>>({})
 
   const fetchData = useCallback(async () => {
@@ -55,6 +74,17 @@ export default function DashboardPage() {
   }, [activeSymbol])
 
   useEffect(() => { fetchData(); const i = setInterval(fetchData, 30000); return () => clearInterval(i) }, [fetchData])
+
+  // Daily brief (LLM, slow) + trading sessions (fast)
+  useEffect(() => {
+    let alive = true
+    const loadBrief = () => getBrief().then(b => { if (alive) setBrief(b || {}) }).catch(() => {})
+    const loadSessions = () => getMarketSessions().then(s => { if (alive && s && !s.error) setSessions(s) }).catch(() => {})
+    loadBrief(); loadSessions()
+    const bi = setInterval(loadBrief, 30 * 60 * 1000)
+    const si = setInterval(loadSessions, 5 * 60 * 1000)
+    return () => { alive = false; clearInterval(bi); clearInterval(si) }
+  }, [])
 
   // Live market stream: price + 24h change + funding + CVD + VWAP, har 2s
   useEffect(() => {
@@ -194,6 +224,61 @@ export default function DashboardPage() {
           <MarketScanner />
           <CopilotChat />
           <SimulatorPanel />
+        </div>
+      </div>
+
+      {/* Daily Brief + Sessions */}
+      <div className="grid grid-cols-12 gap-4">
+        <div className="col-span-12 lg:col-span-8">
+          <div className="glass rounded-xl p-5 border border-dark-500 h-full">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white">🗞️ Daily Market Brief</h3>
+              <span className="text-[10px] text-text-secondary">{brief?.source === 'llm' ? 'AI desk' : brief?.source === 'template' ? 'template' : 'loading…'}</span>
+            </div>
+            {!brief?.brief && <p className="text-text-secondary text-xs animate-pulse">Writing today's brief…</p>}
+            {brief?.brief && (
+              <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
+                <BriefBody text={brief.brief} />
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="col-span-12 lg:col-span-4">
+          <div className="glass rounded-xl p-5 border border-dark-500 h-full">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white">🕒 Trading Sessions</h3>
+              <span className="text-[10px] text-text-secondary">{sessions?.is_weekend ? 'weekend' : `${sessions?.time_utc || ''} UTC`}</span>
+            </div>
+            {!sessions && <p className="text-text-secondary text-xs animate-pulse">Loading sessions…</p>}
+            {sessions && (
+              <div className="space-y-2">
+                {(sessions.sessions || []).map((s: any) => (
+                  <div key={s.key} className={`rounded-lg p-2.5 border ${s.open ? 'bg-accent-green/10 border-accent-green/30' : 'bg-dark-700/50 border-dark-500'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-white font-medium">{s.emoji} {s.label} <span className="text-text-secondary font-normal">· {s.start_utc}:00–{s.end_utc}:00</span></span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${s.open ? 'bg-accent-green/20 text-accent-green' : 'bg-dark-600 text-text-secondary'}`}>
+                        {s.open ? 'OPEN' : s.opens_in_h != null ? `opens ${s.opens_in_h}h` : 'closed'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-[10px] text-text-secondary">{s.centers}</span>
+                      <span className="text-[10px] text-accent-purple font-mono">vol {s.avg_vol_pct_7d}%</span>
+                    </div>
+                  </div>
+                ))}
+                {sessions.best_window_utc && (
+                  <div className="text-[11px] text-accent-blue bg-accent-blue/10 border border-accent-blue/20 rounded-lg px-3 py-2">
+                    ★ Best window: {sessions.best_window_utc}
+                  </div>
+                )}
+                {(sessions.overlaps || []).length > 0 && (
+                  <div className="text-[11px] text-accent-green bg-accent-green/10 border border-accent-green/20 rounded-lg px-3 py-2">
+                    ⚡ {sessions.overlaps.map((o: any) => o.label || o.name || String(o)).join(' · ')}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

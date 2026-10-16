@@ -1,6 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { getGradedSignals } from '@/lib/api'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -8,11 +9,28 @@ export default function SignalsPage() {
   const { token } = useAuth()
   const [signals, setSignals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [graded, setGraded] = useState<Record<string, any>>({})
 
   useEffect(() => {
     if (!token) return
     fetch(`${API}/api/strategies/signals`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(d => setSignals(Array.isArray(d) ? d : []))
+      .then(r => r.json()).then(d => {
+        const list = Array.isArray(d) ? d : []
+        setSignals(list)
+        const pairs = new Map<string, { symbol: string; strategy: string }>()
+        list.forEach((s: any) => {
+          if (s.symbol && s.strategy) pairs.set(`${s.symbol}|${s.strategy}`, { symbol: s.symbol, strategy: s.strategy })
+        })
+        // Grade each unique (symbol, strategy) — historical calls scored TP / SL / open
+        pairs.forEach(async ({ symbol, strategy }, key) => {
+          try {
+            const g = await getGradedSignals(symbol, strategy, '15m')
+            if (g && !g.error && g.summary && g.summary.total > 0) {
+              setGraded(prev => ({ ...prev, [key]: g.summary }))
+            }
+          } catch {}
+        })
+      })
       .catch(() => {}).finally(() => setLoading(false))
   }, [token])
 
@@ -31,14 +49,22 @@ export default function SignalsPage() {
       )}
 
       <div className="space-y-3">
-        {signals.map((s) => (
+        {signals.map((s) => {
+          const g = graded[`${s.symbol}|${s.strategy}`]
+          return (
           <div key={s.id} className="glass rounded-xl p-4 border border-dark-500">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className={`text-lg font-bold ${biasColor(s.bias)}`}>{s.bias}</span>
                 <span className="text-xs bg-dark-600 text-text-secondary px-2 py-0.5 rounded">{s.tier}</span>
                 <span className="text-sm text-white">{s.symbol}</span>
                 <span className="text-xs text-text-secondary bg-dark-700 px-2 py-0.5 rounded">{s.strategy}</span>
+                {g && (
+                  <span className="text-[10px] px-2 py-0.5 rounded border border-dark-500 text-text-secondary font-mono"
+                    title={`Historical grade of this strategy: ${g.target_hit} target · ${g.stop_hit} stop · ${g.open} open`}>
+                    🎯 {g.target_hit}TP · {g.stop_hit}SL · {g.open}▶ <span className={Number(g.win_rate) >= 50 ? 'text-accent-green' : 'text-accent-red'}>{g.win_rate}%</span>
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {s.delivered_telegram && <span className="text-[10px] text-accent-blue">📱 Telegram</span>}
@@ -65,7 +91,8 @@ export default function SignalsPage() {
             </div>
             {s.reasoning && <p className="text-xs text-text-secondary mt-2 italic">{s.reasoning}</p>}
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

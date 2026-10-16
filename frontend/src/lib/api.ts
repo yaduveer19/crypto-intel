@@ -241,3 +241,91 @@ export function createBinanceWebSocket(symbol: string, onPrice: (price: number) 
     },
   }
 }
+
+// ============ deeepr-style feature suite ============
+
+export async function getAnalyze(symbol: string, timeframe = '1h') {
+  return fetchJSON(`${API}/api/analyze/${symbol}?timeframe=${timeframe}`)
+}
+
+export async function compileStrategy(text: string) {
+  const res = await fetch(`${API}/api/strategies/compile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  return res.json()
+}
+
+export async function getStrategyTemplates() {
+  return fetchJSON(`${API}/api/strategies/templates`)
+}
+
+export async function runBacktest(symbol: string, rules: any, limit = 400) {
+  const res = await fetch(`${API}/api/backtest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symbol, rules, limit }),
+  })
+  return res.json()
+}
+
+export async function getPaperState() {
+  return fetchJSON(`${API}/api/paper/state`)
+}
+
+export async function paperOpen(symbol: string, side: 'long' | 'short', usd: number) {
+  const res = await fetch(`${API}/api/paper/open`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symbol, side, usd }),
+  })
+  return res.json()
+}
+
+export async function paperClose(id: string) {
+  const res = await fetch(`${API}/api/paper/close`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  })
+  return res.json()
+}
+
+export async function paperReset() {
+  const res = await fetch(`${API}/api/paper/reset`, { method: 'POST' })
+  return res.json()
+}
+
+export async function getMarketSessions() {
+  return fetchJSON(`${API}/api/market-sessions`)
+}
+
+export async function getBrief() {
+  return fetchJSON(`${API}/api/brief`)
+}
+
+export async function getGradedSignals(symbol: string, strategy: string, timeframe = '15m') {
+  return fetchJSON(`${API}/api/signals/graded?symbol=${symbol}&strategy=${strategy}&timeframe=${timeframe}`)
+}
+
+export async function simulateScenario(shocks?: number[]) {
+  const res = await fetch(`${API}/api/scenarios/simulate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(shocks ? { shocks } : {}),
+  })
+  return res.json()
+}
+
+export async function getOiSeries(symbol: string, period = '1h', limit = 48) {
+  return fetchJSON(`${API}/api/intel/oi-series?symbol=${symbol}&period=${period}&limit=${limit}`)
+}
+
+export async function getTakerVolume(symbol: string, period = '1h', limit = 24) {
+  return fetchJSON(`${API}/api/intel/taker-volume?symbol=${symbol}&period=${period}&limit=${limit}`)
+}
+
+export async function getCoinbasePremium() {
+  return fetchJSON(`${API}/api/intel/coinbase-premium`)
+}

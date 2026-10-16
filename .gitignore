@@ -26,3 +26,7 @@ pgdata/
 
 # Logs
 *.log
+
+# Local runtime state (paper account, telegram creds)
+paper_state.json
+telegram_state.json

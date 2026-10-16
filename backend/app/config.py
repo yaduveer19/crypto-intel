@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     # LLM
     llm_api_key: str = "sk-BP2U8RoftMRtikEphIw2d8QB0PtUYnYmlPhLylvMuVnJVNDf"
     llm_api_base: str = "https://apihub.agnes-ai.com/v1"
-    llm_model: str = "agnes-2.0-flash"
+    llm_model: str = "agnes-3.0-flash"
 
     # Database
     database_url: str = "postgresql://cryptouser:cryptopass@postgres:5432/cryptodb"
