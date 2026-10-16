@@ -22,7 +22,7 @@ export default function SimulatorPanel() {
 
   return (
     <div className="glass rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-white mb-3">📊 Scenario Simulator</h3>
+      <h3 className="text-sm font-semibold text-white mb-3">Scenario Simulator</h3>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>

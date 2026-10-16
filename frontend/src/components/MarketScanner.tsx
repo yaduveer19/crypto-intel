@@ -57,10 +57,10 @@ export default function MarketScanner() {
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-white">🔭 Market Scanner</h3>
+        <h3 className="text-sm font-semibold text-white">Market Scanner</h3>
         <button onClick={scan} disabled={loading}
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent-blue hover:bg-accent-blue/80 text-white disabled:opacity-50 transition">
-          {loading ? 'Scanning...' : '⚡ Analyze All Markets'}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent-gold/15 text-accent-gold border border-accent-gold/30 hover:bg-accent-gold/25 disabled:opacity-50 transition">
+          {loading ? 'Scanning...' : 'Analyze All Markets'}
         </button>
       </div>
 

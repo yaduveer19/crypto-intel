@@ -22,7 +22,7 @@ export default function FundingMatrixPanel() {
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-white">⚡ Funding Matrix</h3>
+        <h3 className="text-sm font-semibold text-white">Funding Matrix</h3>
         <div className="text-[10px] text-text-secondary">8h funding · cross-exchange</div>
       </div>
 

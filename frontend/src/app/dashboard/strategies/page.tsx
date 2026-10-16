@@ -158,7 +158,7 @@ export default function StrategiesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Trading Strategies</h1>
         <button onClick={runAll} className="bg-accent-purple/20 text-accent-purple px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-purple/30 transition">
-          🚀 Run All Strategies
+          Run All Strategies
         </button>
       </div>
 
@@ -202,7 +202,7 @@ export default function StrategiesPage() {
       <div className="glass rounded-xl p-6 border border-dark-500">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div>
-            <h2 className="text-white font-semibold text-lg">🧪 Strategy Lab</h2>
+            <h2 className="text-white font-semibold text-lg">Strategy Lab</h2>
             <p className="text-text-secondary text-sm">Describe a strategy in plain English → compiled rules → backtest on real candles</p>
           </div>
           <div className="flex gap-2">
@@ -234,7 +234,7 @@ export default function StrategiesPage() {
         <div className="flex flex-wrap items-center gap-3 mt-3">
           <button onClick={doCompile} disabled={labBusy}
             className="bg-accent-purple/20 text-accent-purple hover:bg-accent-purple/30 px-5 py-2.5 rounded-lg text-sm font-medium transition disabled:opacity-40">
-            {labBusy ? 'Working…' : '⚡ Compile & Backtest'}
+            {labBusy ? 'Working…' : 'Compile & Backtest'}
           </button>
           {labRules && !labBusy && (
             <button onClick={() => doBacktest(labRules, labMeta)}

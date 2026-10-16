@@ -41,7 +41,7 @@ export default function LaneBreakdown({ lanes, loading }: Props) {
   if (!lanes || lanes.length === 0) {
     return (
       <div className="glass rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-white mb-3">🔍 Analysis Lanes</h3>
+        <h3 className="text-sm font-semibold text-white mb-3">Analysis Lanes</h3>
         <p className="text-text-secondary text-xs">Waiting for lane data...</p>
       </div>
     )
@@ -49,14 +49,14 @@ export default function LaneBreakdown({ lanes, loading }: Props) {
 
   return (
     <div className="glass rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-white mb-3">🔍 Analysis Lanes</h3>
+      <h3 className="text-sm font-semibold text-white mb-3">Analysis Lanes</h3>
       <div className="space-y-2">
         {lanes.map((lane, i) => (
           <div key={i} className="bg-dark-700/50 rounded-lg p-3">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <span>{laneIcons[lane.lane] || '📊'}</span>
-                <span className="text-sm text-white capitalize">{lane.lane}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-blue/70" />
+                <span className="capitalize">{lane.lane === 'tech' ? 'Technical' : lane.lane === 'flow' ? 'Flow' : lane.lane === 'news' ? 'Narrative' : lane.lane === 'macro' ? 'Macro' : lane.lane}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${biasColors[lane.bias] || 'text-text-secondary bg-dark-600'}`}>

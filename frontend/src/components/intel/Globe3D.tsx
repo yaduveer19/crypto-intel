@@ -65,7 +65,7 @@ export default function Globe3D({ prices, height = 420 }: { prices?: Record<stri
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-white">🌐 3D Global Radar</h3>
+        <h3 className="text-sm font-semibold text-white">3D Global Radar</h3>
         <div className="text-[10px] text-text-secondary">12 liquidity hubs · live routing</div>
       </div>
       <div id="globe3d-box">

@@ -133,7 +133,7 @@ export default function AnalyzePage() {
               <div>
                 <div className="text-text-secondary text-xs uppercase tracking-wider">Conviction</div>
                 <div className={`text-2xl font-bold ${st.text}`}>{v.conviction ?? 0}%</div>
-                <div className="text-text-secondary text-xs mt-1">{v.agreement} · {v.bulls}🟢 / {v.bears}🔴</div>
+                <div className="text-text-secondary text-xs mt-1">{v.agreement} · <span className="text-accent-green font-semibold">{v.bulls}</span> <span className="text-text-muted">vs</span> <span className="text-accent-red font-semibold">{v.bears}</span></div>
               </div>
             </div>
             <div className="text-right">
@@ -173,7 +173,7 @@ export default function AnalyzePage() {
                 dir === 'SHORT' ? 'bg-accent-red/20 text-accent-red hover:bg-accent-red/30'
                 : dir === 'LONG' ? 'bg-accent-green/20 text-accent-green hover:bg-accent-green/30'
                 : 'bg-dark-700 text-text-secondary'}`}>
-              {openBusy ? 'Opening…' : dir === 'WAIT' ? 'WAIT — no entry' : `📝 Paper trade ${dir} $500`}
+              {openBusy ? 'Opening…' : dir === 'WAIT' ? 'WAIT — no entry' : `Paper trade ${dir} $500`}
             </button>
             <span className="text-[11px] text-text-secondary">auto-refresh 60s · updated {data?.updated ? new Date(data.updated * 1000).toLocaleTimeString() : '—'}</span>
           </div>

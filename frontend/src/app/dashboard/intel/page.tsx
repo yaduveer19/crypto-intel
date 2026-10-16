@@ -15,13 +15,13 @@ const Globe3D = dynamic(() => import('@/components/intel/Globe3D'), { ssr: false
 
 const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT']
 const TABS = [
-  { id: 'globe', label: '🌐 Global Radar' },
-  { id: 'funding', label: '⚡ Funding Matrix' },
-  { id: 'liq', label: '🧲 Liquidations' },
-  { id: 'patterns', label: '📐 Patterns' },
-  { id: 'footprint', label: '👣 Footprint' },
-  { id: 'walls', label: '🧱 Whale Walls' },
-  { id: 'onchain', label: '🔗 On-Chain' },
+  { id: 'globe', label: 'Global Radar' },
+  { id: 'funding', label: 'Funding Matrix' },
+  { id: 'liq', label: 'Liquidations' },
+  { id: 'patterns', label: 'Patterns' },
+  { id: 'footprint', label: 'Footprint' },
+  { id: 'walls', label: 'Whale Walls' },
+  { id: 'onchain', label: 'On-Chain' },
   { id: 'macro', label: '📊 Macro' },
   { id: 'news', label: '📰 News' },
 ]

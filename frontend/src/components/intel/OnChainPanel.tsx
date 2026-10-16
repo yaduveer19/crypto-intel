@@ -29,7 +29,7 @@ export default function OnChainPanel() {
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-white">🔗 On-Chain Intelligence</h3>
+        <h3 className="text-sm font-semibold text-white">On-Chain Intelligence</h3>
         <div className="flex items-center gap-2">
           {data?.regime && (
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${

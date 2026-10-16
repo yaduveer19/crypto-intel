@@ -113,7 +113,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((p, i) => (
             <div key={i} className={`glass rounded-xl p-6 border ${i === 1 ? 'border-accent-blue/40 glow-blue' : 'border-dark-500'}`}>
-              {i === 1 && <div className="text-accent-blue text-xs font-semibold mb-2">🔥 MOST POPULAR</div>}
+              {i === 1 && <div className="text-accent-blue text-xs font-semibold mb-2">MOST POPULAR</div>}
               <h3 className="text-xl font-bold text-white">{p.name}</h3>
               <div className="text-3xl font-bold text-white mt-2">{p.price}<span className="text-text-secondary text-sm font-normal">/mo</span></div>
               <p className="text-text-secondary text-sm mt-1 mb-6">{p.desc}</p>

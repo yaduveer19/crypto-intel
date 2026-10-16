@@ -34,7 +34,7 @@ export default function CVDChart({ symbol }: { symbol: string }) {
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-white">📈 CVD — Cumulative Volume Delta</h3>
+        <h3 className="text-sm font-semibold text-white">CVD — Cumulative Volume Delta</h3>
         {signal && (
           <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
             signal.divergence === 'bullish' ? 'text-accent-green bg-accent-green/10 border-accent-green/30'

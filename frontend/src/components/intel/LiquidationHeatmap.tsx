@@ -29,7 +29,7 @@ export default function LiquidationHeatmap({ symbol }: { symbol: string }) {
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-white">🧲 Liquidation Heatmap</h3>
+        <h3 className="text-sm font-semibold text-white">Liquidation Heatmap</h3>
         <div className="flex items-center gap-2">
           <span className={`w-1.5 h-1.5 rounded-full ${data?.live ? 'bg-accent-green animate-pulse' : 'bg-accent-yellow'}`} />
           <span className="text-[10px] text-text-secondary">{data?.live ? 'LIVE forceOrder feed' : 'estimated'}</span>

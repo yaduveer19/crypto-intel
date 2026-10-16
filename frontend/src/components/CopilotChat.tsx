@@ -46,7 +46,7 @@ export default function CopilotChat() {
   return (
     <div className="glass rounded-xl flex flex-col h-full" style={{ maxHeight: '500px' }}>
       <div className="flex items-center justify-between p-3 border-b border-dark-500">
-        <h3 className="text-sm font-semibold text-white">🤖 AI Copilot</h3>
+        <h3 className="text-sm font-semibold text-white">AI Copilot</h3>
         <select
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}

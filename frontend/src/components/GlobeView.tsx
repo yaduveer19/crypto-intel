@@ -122,7 +122,7 @@ export default function GlobeView({ news }: { news?: any[] }) {
 
   return (
     <div className="glass rounded-xl p-4 h-full relative overflow-hidden">
-      <h3 className="text-sm font-semibold text-white mb-2 relative z-10">🌍 Global Activity</h3>
+      <h3 className="text-sm font-semibold text-white mb-2 relative z-10">Global Activity</h3>
       <canvas
         ref={canvasRef}
         className="w-full h-[calc(100%-2rem)]"

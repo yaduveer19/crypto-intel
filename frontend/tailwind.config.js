@@ -5,20 +5,34 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Inter Tight', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+      },
       colors: {
         dark: {
-          900: '#0a0a0f',
-          800: '#12121a',
-          700: '#1a1a2e',
-          600: '#2a2a3e',
-          500: '#3a3a4e',
+          950: '#06070b',
+          900: '#0a0c11',
+          850: '#0d1017',
+          800: '#10131b',
+          700: '#151a24',
+          600: '#1c222e',
+          500: '#262e3c',
+          400: '#3a4254',
         },
         accent: {
-          green: '#00ff88',
-          red: '#ff3366',
-          blue: '#3399ff',
-          yellow: '#ffcc00',
-          purple: '#9933ff',
+          green: '#35d99a',
+          red: '#f4586f',
+          blue: '#5b9dff',
+          yellow: '#eeb144',
+          purple: '#9d7bfa',
+          gold: '#d9a84e',
+        },
+        text: {
+          primary: '#e9ecf4',
+          secondary: '#9aa3b8',
+          muted: '#5d6779',
         },
       },
       animation: {

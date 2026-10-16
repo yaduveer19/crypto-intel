@@ -73,7 +73,7 @@ export default function CandlestickChart({ symbol, exchange }: { symbol: string;
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-white">🕯️ Candlestick — {symbol.replace('USDT', '')}/USDT</h3>
+        <h3 className="text-sm font-semibold text-white">Candlestick — {symbol.replace('USDT', '')}/USDT</h3>
         <div className="text-[10px] text-text-secondary">{exchange || 'binance'} · 5m · VWAP overlay</div>
       </div>
 

@@ -31,7 +31,7 @@ export default function VolumeProfileChart({ symbol }: { symbol: string }) {
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-white">📊 Volume Profile & VWAP</h3>
+        <h3 className="text-sm font-semibold text-white">Volume Profile & VWAP</h3>
         <div className="text-[10px] text-text-secondary">
           POC <span className="text-accent-yellow font-mono">{poc != null ? fmt(poc) : '—'}</span>
           {vwap != null && <span className="ml-2">VWAP <span className="text-accent-blue font-mono">{fmt(vwap)}</span></span>}

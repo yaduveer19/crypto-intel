@@ -103,7 +103,7 @@ export default function PaperPage() {
         <div className="flex gap-2">
           <button onClick={runScenario} disabled={scenBusy}
             className="bg-accent-purple/20 text-accent-purple hover:bg-accent-purple/30 px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-40">
-            {scenBusy ? 'Simulating…' : '⚡ Scenario shock sim'}
+            {scenBusy ? 'Simulating…' : 'Scenario shock sim'}
           </button>
           <button onClick={reset} disabled={busy}
             className="bg-accent-red/10 text-accent-red hover:bg-accent-red/20 px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-40">
@@ -209,7 +209,7 @@ export default function PaperPage() {
       {/* Scenario results */}
       {scenario && (
         <div className="glass rounded-xl p-5 border border-dark-500">
-          <h2 className="text-white font-semibold mb-1">⚡ Scenario shock simulation</h2>
+          <h2 className="text-white font-semibold mb-1">Scenario shock simulation</h2>
           <p className="text-text-secondary text-xs mb-4">
             {scenario.open_positions ?? 0} open position(s) · reference price {scenario.reference_price ? `$${scenario.reference_price.toLocaleString()}` : '—'}
           </p>

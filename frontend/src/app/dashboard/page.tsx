@@ -127,18 +127,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-xs text-text-secondary mt-0.5">Live market intelligence — tick-level data, streaming every 2s</p>
+          <h1 className="text-[26px] font-bold text-white">Dashboard</h1>
+          <p className="text-[13px] text-text-secondary mt-1">Live tick-level market intelligence, streaming every 2s</p>
         </div>
         <div className="flex items-center gap-3">
           <LiveModeBadge live={wsLive} />
-          <div className="flex gap-2">
+          <div className="flex bg-dark-800/80 border border-white/[0.06] rounded-xl p-1 gap-0.5">
             {SYMBOLS.map(sym => (
               <button key={sym} onClick={() => setActiveSymbol(sym)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  activeSymbol === sym ? 'bg-accent-blue/20 text-accent-blue border border-accent-blue/30' : 'text-text-secondary hover:text-white border border-transparent'
+                className={`px-3.5 py-1.5 rounded-lg text-[13px] font-semibold font-mono transition ${
+                  activeSymbol === sym ? 'bg-accent-gold/15 text-accent-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]' : 'text-text-secondary hover:text-white'
                 }`}>
                 {sym.replace('USDT', '')}
               </button>
@@ -153,38 +153,41 @@ export default function DashboardPage() {
           const m = markets[sym]
           const chg = m?.change_24h_pct
           return (
-            <div key={sym} className="glass rounded-xl p-4 border border-dark-500 hover:border-accent-blue/40 transition">
+            <div key={sym} className="glass lift rounded-xl p-4 hover:border-white/[0.12]">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="text-xs text-text-secondary font-medium">{sym.replace('USDT', '')}/USDT <span className="text-[10px] uppercase ml-1 px-1.5 py-0.5 rounded bg-dark-600/60 text-accent-blue">{m?.mode || 'live'}</span></div>
-                  <div className="text-2xl font-bold text-white font-mono mt-1">{fmtPrice(m?.price)}</div>
-                  <div className={`text-xs font-semibold mt-1 ${changeColor(chg)}`}>{changeArrow(chg)} {chg !== undefined && !isNaN(chg) ? `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}% 24h` : '— 24h'}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-white font-mono">{sym.replace('USDT', '')}/USDT</span>
+                    <span className="text-[9px] uppercase tracking-[0.14em] font-semibold px-1.5 py-0.5 rounded bg-accent-green/10 text-accent-green">{m?.mode || 'live'}</span>
+                  </div>
+                  <div className="text-[26px] font-semibold text-white font-mono tracking-tight mt-1.5 tabular-nums">{fmtPrice(m?.price)}</div>
+                  <div className={`text-xs font-semibold font-mono mt-1 ${changeColor(chg)}`}>{changeArrow(chg)} {chg !== undefined && !isNaN(chg) ? `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}% 24h` : '— 24h'}</div>
                 </div>
                 <div className="text-right">
-                  <div className={`text-lg font-bold ${
+                  <div className={`text-lg font-bold font-mono ${
                     verdicts[sym]?.bias === 'BULL' ? 'text-accent-green' : verdicts[sym]?.bias === 'BEAR' ? 'text-accent-red' : 'text-accent-yellow'
                   }`}>
                     {verdicts[sym]?.bias || '—'}
-                    {verdicts[sym]?.tier && <div className="text-[10px] text-text-secondary font-normal">{verdicts[sym].tier}</div>}
+                    {verdicts[sym]?.tier && <div className="label-micro text-text-muted mt-0.5">{verdicts[sym].tier}</div>}
                   </div>
                 </div>
               </div>
-              <div className="flex gap-4 mt-3 pt-3 border-t border-dark-600 text-xs">
+              <div className="flex gap-5 mt-3 pt-3 border-t border-white/[0.05] text-xs">
                 <div>
-                  <div className="text-text-secondary">Funding</div>
-                  <div className={`font-mono font-semibold ${m?.funding && m.funding > 0 ? 'text-accent-green' : m?.funding && m.funding < 0 ? 'text-accent-red' : 'text-white'}`}>
+                  <div className="label-micro">Funding</div>
+                  <div className={`font-mono font-semibold mt-0.5 ${m?.funding && m.funding > 0 ? 'text-accent-green' : m?.funding && m.funding < 0 ? 'text-accent-red' : 'text-white'}`}>
                     {m?.funding !== undefined ? `${m.funding >= 0 ? '+' : ''}${m.funding.toFixed(4)}%` : '—'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-text-secondary">CVD</div>
-                  <div className={`font-mono font-semibold ${m?.cvd && m.cvd > 0 ? 'text-accent-green' : m?.cvd && m.cvd < 0 ? 'text-accent-red' : 'text-white'}`}>
+                  <div className="label-micro">CVD</div>
+                  <div className={`font-mono font-semibold mt-0.5 ${m?.cvd && m.cvd > 0 ? 'text-accent-green' : m?.cvd && m.cvd < 0 ? 'text-accent-red' : 'text-white'}`}>
                     {m?.cvd !== undefined ? `${m.cvd >= 0 ? '+' : ''}${Math.round(m.cvd)}` : '—'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-text-secondary">VWAP</div>
-                  <div className="font-mono font-semibold text-white">{m?.vwap ? `$${Math.round(m.vwap).toLocaleString()}` : '—'}</div>
+                  <div className="label-micro">VWAP</div>
+                  <div className="font-mono font-semibold text-white mt-0.5">{m?.vwap ? `$${Math.round(m.vwap).toLocaleString()}` : '—'}</div>
                 </div>
               </div>
             </div>
@@ -204,7 +207,7 @@ export default function DashboardPage() {
         <div className="col-span-12 lg:col-span-4 space-y-4">
           <GlobeView />
           <div className="glass rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-white mb-3">📜 Signal History</h3>
+            <h3 className="text-sm font-semibold text-white mb-3">Signal History</h3>
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {history.length === 0 && <p className="text-text-secondary text-xs">No signals yet — run strategies</p>}
               {history.slice(0, 10).map((h, i) => (
@@ -232,7 +235,7 @@ export default function DashboardPage() {
         <div className="col-span-12 lg:col-span-8">
           <div className="glass rounded-xl p-5 border border-dark-500 h-full">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-white">🗞️ Daily Market Brief</h3>
+              <h3 className="text-sm font-semibold text-white">Daily Market Brief</h3>
               <span className="text-[10px] text-text-secondary">{brief?.source === 'llm' ? 'AI desk' : brief?.source === 'template' ? 'template' : 'loading…'}</span>
             </div>
             {!brief?.brief && <p className="text-text-secondary text-xs animate-pulse">Writing today's brief…</p>}
@@ -246,7 +249,7 @@ export default function DashboardPage() {
         <div className="col-span-12 lg:col-span-4">
           <div className="glass rounded-xl p-5 border border-dark-500 h-full">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-white">🕒 Trading Sessions</h3>
+              <h3 className="text-sm font-semibold text-white">Trading Sessions</h3>
               <span className="text-[10px] text-text-secondary">{sessions?.is_weekend ? 'weekend' : `${sessions?.time_utc || ''} UTC`}</span>
             </div>
             {!sessions && <p className="text-text-secondary text-xs animate-pulse">Loading sessions…</p>}

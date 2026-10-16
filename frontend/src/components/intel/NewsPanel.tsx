@@ -20,7 +20,7 @@ export default function NewsPanel() {
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-white">📰 Macro & Whale News</h3>
+        <h3 className="text-sm font-semibold text-white">Macro & Whale News</h3>
         <div className="flex gap-1">
           <button onClick={() => setTab('news')}
             className={`text-[10px] px-2 py-1 rounded ${tab === 'news' ? 'bg-accent-blue/20 text-accent-blue' : 'text-text-secondary hover:text-white'}`}>News</button>

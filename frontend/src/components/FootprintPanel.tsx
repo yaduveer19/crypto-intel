@@ -28,7 +28,7 @@ export default function FootprintPanel({ symbol }: { symbol: string }) {
 
   return (
     <div className="glass rounded-xl p-4 border border-dark-500">
-      <h3 className="text-sm font-semibold text-white mb-3">🔍 Footprint / TPO</h3>
+      <h3 className="text-sm font-semibold text-white mb-3">Footprint / TPO</h3>
 
       {loading && <p className="text-text-secondary text-xs">Loading footprint...</p>}
 

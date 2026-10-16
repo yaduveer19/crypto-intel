@@ -69,7 +69,7 @@ export default function SettingsPage() {
 
       {/* Telegram */}
       <div className="glass rounded-xl p-6 border border-dark-500">
-        <h2 className="text-lg font-semibold text-white mb-4">📱 Telegram Alerts</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">Telegram Alerts</h2>
         <p className="text-text-secondary text-sm mb-4">
           Connect your Telegram bot to receive trade signals directly to your phone.
           Create a bot via <a href="https://t.me/BotFather" target="_blank" className="text-accent-blue hover:underline">@BotFather</a>,
